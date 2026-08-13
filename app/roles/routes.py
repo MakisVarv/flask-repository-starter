@@ -3,7 +3,6 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 
 from app.auth.authorization import permission_required
-
 from app.config.database import SessionLocal
 from app.roles.schema import (
     add_permission_schema,
