@@ -6,7 +6,6 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app.auth.schema import login_schema, register_schema
 from app.auth.service import AuthService
-
 from app.config.database import SessionLocal
 from app.users.schema import user_schema
 from app.users.service import UserService

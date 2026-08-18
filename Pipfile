@@ -11,6 +11,8 @@ python-dotenv = "*"
 alembic = "*"
 marshmallow = "*"
 flask-jwt-extended = "*"
+pytest = "*"
+pytest-cov = "*"
 
 [dev-packages]
 black = "*"
