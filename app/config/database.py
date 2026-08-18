@@ -17,3 +17,5 @@ def init_db(app):
     engine = create_engine(database_url)
 
     SessionLocal.configure(bind=engine)
+
+    app.extensions["db_engine"] = engine
