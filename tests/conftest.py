@@ -4,6 +4,7 @@ from app import create_app
 from app.config.config import TestingConfig
 from app.config.database import SessionLocal
 from app.roles.model import Role
+from app.users import UserService
 
 
 @pytest.fixture
@@ -51,3 +52,27 @@ def user_role(db_transaction):
 
         session.add(role)
         session.commit()
+
+        return role.id
+
+
+@pytest.fixture
+def regular_user(user_role):
+    email = "john@example.com"
+    password = "Password123!"
+
+    with SessionLocal() as session:
+        user_service = UserService(session)
+
+        user_service.create_user(
+            first_name="John",
+            last_name="Doe",
+            email=email,
+            password=password,
+            role_id=user_role,
+        )
+
+    return {
+        "email": email,
+        "password": password,
+    }
