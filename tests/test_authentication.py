@@ -104,3 +104,63 @@ def test_login_with_unknown_email(client):
     assert response.status_code == 401
     assert "access_token" not in data
     assert data["message"] == "Invalid email or password."
+
+
+def test_logged_in_user_jwt(client, regular_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json=regular_user,
+    )
+    data = login_response.get_json()
+    assert login_response.status_code == 200
+    assert "access_token" in data
+    assert isinstance(data["access_token"], str)
+    access_token = data["access_token"]
+    second_response = client.get(
+        "/api/users/",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert second_response.status_code == 403
+    data = second_response.get_json()
+    assert data["message"] == "You do not have permission to perform this action."
+
+
+def test_admin_can_read_users(client, admin_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json=admin_user,
+    )
+    data = login_response.get_json()
+    assert login_response.status_code == 200
+    assert "access_token" in data
+    assert isinstance(data["access_token"], str)
+    access_token = data["access_token"]
+    second_response = client.get(
+        "/api/users/",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert second_response.status_code == 200
+
+
+def test_invalid_token(client, admin_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json=admin_user,
+    )
+    assert login_response.status_code == 200
+    access_token = "not_a_real_token"
+    second_response = client.get(
+        "/api/users/",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert second_response.status_code == 401
+
+
+def test_no_token(client, admin_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json=admin_user,
+    )
+    assert login_response.status_code == 200
+    second_response = client.get("/api/users/")
+    assert second_response.status_code == 401
