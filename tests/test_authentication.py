@@ -142,12 +142,7 @@ def test_admin_can_read_users(client, admin_user):
     assert second_response.status_code == 200
 
 
-def test_invalid_token(client, admin_user):
-    login_response = client.post(
-        "/api/auth/login",
-        json=admin_user,
-    )
-    assert login_response.status_code == 200
+def test_invalid_token(client):
     access_token = "not_a_real_token"
     second_response = client.get(
         "/api/users/",
@@ -156,11 +151,76 @@ def test_invalid_token(client, admin_user):
     assert second_response.status_code == 401
 
 
-def test_no_token(client, admin_user):
-    login_response = client.post(
-        "/api/auth/login",
-        json=admin_user,
-    )
-    assert login_response.status_code == 200
+def test_no_token(client):
     second_response = client.get("/api/users/")
     assert second_response.status_code == 401
+
+
+def test_register_invalid_email(client):
+    payload = {
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "not-an-email",
+        "password": "Password123!",
+    }
+
+    first_response = client.post(
+        "/api/auth/register",
+        json=payload,
+    )
+    data = first_response.get_json()
+    assert first_response.status_code == 400
+    assert "errors" in data
+    assert "email" in data["errors"]
+    assert "Not a valid email address." in data["errors"]["email"]
+
+
+def test_register_invalid_password(client):
+    payload = {
+        "first_name": "John",
+        "last_name": "Doe",
+        "email": "john@example.com",
+        "password": "Pass123",
+    }
+
+    first_response = client.post(
+        "/api/auth/register",
+        json=payload,
+    )
+    data = first_response.get_json()
+    assert first_response.status_code == 400
+    assert "errors" in data
+    assert "password" in data["errors"]
+    assert "Shorter than minimum length 8." in data["errors"]["password"]
+
+
+def test_register_missing_email(client):
+    payload = {
+        "first_name": "John",
+        "last_name": "Doe",
+        "password": "Password123!",
+    }
+
+    first_response = client.post(
+        "/api/auth/register",
+        json=payload,
+    )
+    data = first_response.get_json()
+    assert first_response.status_code == 400
+    assert "errors" in data
+    assert "email" in data["errors"]
+    assert "Missing data for required field." in data["errors"]["email"]
+
+
+def test_register_missing_password(client):
+    payload = {"first_name": "John", "last_name": "Doe", "email": "john@example.com"}
+
+    first_response = client.post(
+        "/api/auth/register",
+        json=payload,
+    )
+    data = first_response.get_json()
+    assert first_response.status_code == 400
+    assert "errors" in data
+    assert "password" in data["errors"]
+    assert "Missing data for required field." in data["errors"]["password"]
