@@ -58,3 +58,29 @@ class AuthService:
         access_token = create_access_token(identity=str(user.id))
 
         return user, access_token
+
+    def get_current_user(self, user_id):
+        user = self.user_repository.get_by_id(user_id)
+
+        if user is None:
+            raise NotFoundException("User")
+
+        return user
+
+    def update_current_user(self, user_id, data):
+        user = self.user_repository.get_by_id(user_id)
+        if user is None:
+            raise NotFoundException("User")
+
+        if "first_name" in data:
+            user.first_name = data["first_name"]
+
+        if "last_name" in data:
+            user.last_name = data["last_name"]
+
+        if "phone" in data:
+            user.phone = data["phone"]
+
+        self.session.commit()
+
+        return user

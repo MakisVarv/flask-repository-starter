@@ -4,11 +4,10 @@ import uuid
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from app.auth.schema import login_schema, register_schema
+from app.auth.schema import login_schema, register_schema, update_me_schema
 from app.auth.service import AuthService
 from app.config.database import SessionLocal
 from app.users.schema import user_schema
-from app.users.service import UserService
 
 auth_bp = Blueprint(
     "auth",
@@ -59,7 +58,20 @@ def me():
     user_id = uuid.UUID(get_jwt_identity())
 
     with SessionLocal() as session:
-        service = UserService(session)
-        user = service.get_user(user_id)
+        service = AuthService(session)
+        user = service.get_current_user(user_id)
+
+        return user_schema.dump(user), 200
+
+
+@auth_bp.patch("/me")
+@jwt_required()
+def update_me():
+    user_id = uuid.UUID(get_jwt_identity())
+    data = update_me_schema.load(request.get_json())
+
+    with SessionLocal() as session:
+        service = AuthService(session)
+        user = service.update_current_user(user_id, data)
 
         return user_schema.dump(user), 200

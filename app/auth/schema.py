@@ -27,3 +27,15 @@ class RegisterSchema(Schema):
 
 
 register_schema = RegisterSchema()
+
+
+class UpdateMeSchema(Schema):
+    first_name = fields.String(required=False)
+    last_name = fields.String(required=False)
+    phone = fields.String(
+        required=False,
+        allow_none=True,
+    )
+
+
+update_me_schema = UpdateMeSchema()
