@@ -82,32 +82,52 @@ def regular_user(user_role):
 
 
 @pytest.fixture
-def user_read_permission(db_transaction):
-    with SessionLocal() as session:
-        permission = Permission(
-            name="user.read",
-            description="Read user information",
-        )
+def admin_permissions(db_transaction):
+    permissions = [
+        Permission(name="user.read", description="Read user information"),
+        Permission(name="user.create", description="Create users"),
+        Permission(name="user.update", description="Update users"),
+        Permission(name="user.delete", description="Delete users"),
+        Permission(name="user.change_role", description="Change a user's role"),
+        Permission(name="role.read", description="Read roles"),
+        Permission(name="role.create", description="Create roles"),
+        Permission(name="role.update", description="Update roles"),
+        Permission(name="role.delete", description="Delete roles"),
+        Permission(
+            name="role.assign_permission",
+            description="Assign or remove permissions from roles",
+        ),
+        Permission(name="permission.read", description="Read permissions"),
+        Permission(name="permission.create", description="Create permissions"),
+        Permission(name="permission.update", description="Update permissions"),
+        Permission(name="permission.delete", description="Delete permissions"),
+    ]
 
-        session.add(permission)
+    with SessionLocal() as session:
+        session.add_all(permissions)
         session.commit()
 
-        return permission.id
+        return [permission.id for permission in permissions]
 
 
 @pytest.fixture
-def admin_role(user_read_permission):
+def admin_role(admin_permissions):
     with SessionLocal() as session:
-        permission = session.get(Permission, user_read_permission)
+        permissions: list[Permission] = []
 
-        assert permission is not None
+        for permission_id in admin_permissions:
+            permission = session.get(Permission, permission_id)
+
+            assert permission is not None
+
+            permissions.append(permission)
 
         role = Role(
             name="Admin",
             description="System administrator",
         )
 
-        role.permissions.append(permission)
+        role.permissions.extend(permissions)
 
         session.add(role)
         session.commit()
