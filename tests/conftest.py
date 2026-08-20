@@ -1,7 +1,6 @@
 import pytest
 
 from app import create_app
-from app.common.exceptions.not_found import NotFoundException
 from app.config.config import TestingConfig
 from app.config.database import SessionLocal
 from app.permissions import Permission
@@ -66,15 +65,17 @@ def regular_user(user_role):
     with SessionLocal() as session:
         user_service = UserService(session)
 
-        user_service.create_user(
+        user = user_service.create_user(
             first_name="John",
             last_name="Doe",
             email=email,
             password=password,
             role_id=user_role,
         )
+        user_id = user.id
 
     return {
+        "id": user_id,
         "email": email,
         "password": password,
     }

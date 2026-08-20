@@ -68,9 +68,13 @@ def test_register_duplicate_email(client, user_role):
 
 
 def test_login_user(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
     response = client.post(
         "/api/auth/login",
-        json=regular_user,
+        json=credentials,
     )
     data = response.get_json()
     assert response.status_code == 200
@@ -80,8 +84,12 @@ def test_login_user(client, regular_user):
 
 
 def test_invalid_login(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
     invalid_credentials = {
-        **regular_user,
+        **credentials,
         "password": "Password",
     }
     response = client.post(
@@ -107,9 +115,13 @@ def test_login_with_unknown_email(client):
 
 
 def test_logged_in_user_jwt(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
     login_response = client.post(
         "/api/auth/login",
-        json=regular_user,
+        json=credentials,
     )
     data = login_response.get_json()
     assert login_response.status_code == 200
