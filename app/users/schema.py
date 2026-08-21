@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, validate
 
 from app.roles.schema import RoleSchema
 
@@ -66,3 +66,19 @@ class AssignRoleSchema(Schema):
 
 assign_role_schema = AssignRoleSchema()
 update_user_schema = UpdateUserSchema()
+
+
+class UserQuerySchema(Schema):
+    page = fields.Integer(
+        load_default=1,
+        validate=validate.Range(min=1),
+    )
+
+    page_size = fields.Integer(
+        load_default=10,
+        validate=validate.Range(min=1, max=100),
+    )
+    search = fields.String(load_default=None)
+
+
+user_query_schema = UserQuerySchema()

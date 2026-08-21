@@ -8,6 +8,7 @@ from app.users.schema import (
     assign_role_schema,
     create_user_schema,
     update_user_schema,
+    user_query_schema,
     user_schema,
     users_schema,
 )
@@ -20,11 +21,21 @@ user_bp = Blueprint("users", __name__, url_prefix="/api/users")
 @jwt_required()
 @permission_required("user.read")
 def get_users():
+    query = user_query_schema.load(request.args)
+
+    page = query["page"]
+    page_size = query["page_size"]
+    search = query["search"]
     with SessionLocal() as session:
         service = UserService(session)
-        users = service.get_users()
+        users, pagination = service.get_users(
+            page=page, page_size=page_size, search=search
+        )
 
-        return users_schema.dump(users), 200
+        return {
+            "items": users_schema.dump(users),
+            "pagination": pagination,
+        }, 200
 
 
 @user_bp.get("/<uuid:user_id>")

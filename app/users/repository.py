@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.roles.model import Role
@@ -8,9 +8,21 @@ from app.users.model import User
 
 
 class UserRepository:
-
     def __init__(self, session: Session):
         self.session = session
+
+    def _apply_filters(self, statement, search=None):
+        if search:
+            pattern = f"%{search.strip()}%"
+
+            statement = statement.where(
+                or_(
+                    User.first_name.ilike(pattern),
+                    User.last_name.ilike(pattern),
+                    User.email.ilike(pattern),
+                )
+            )
+        return statement
 
     def get_by_email(self, email: str) -> User | None:
 
@@ -22,12 +34,22 @@ class UserRepository:
 
         return self.get_by_email(email) is not None
 
-    def get_all(self):
+    def get_all(self, page: int = 1, page_size: int = 10, search: str | None = None):
+
+        offset = (page - 1) * page_size
         statement = select(User)
+        statement = self._apply_filters(statement, search)
+
+        statement = statement.order_by(User.id).offset(offset).limit(page_size)
         return self.session.scalars(statement).all()
 
     def get_by_id(self, user_id: uuid.UUID):
         return self.session.get(User, user_id)
+
+    def count(self, search: str | None = None):
+        statement = select(func.count(User.id))
+        statement = self._apply_filters(statement, search)
+        return self.session.scalar(statement) or 0
 
     def create(self, user: User):
         self.session.add(user)

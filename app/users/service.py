@@ -60,9 +60,19 @@ class UserService:
             self.session.rollback()
             raise
 
-    def get_users(self):
+    def get_users(self, page: int = 1, page_size: int = 10, search: str | None = None):
+        users = self.repository.get_all(page=page, page_size=page_size, search=search)
 
-        return self.repository.get_all()
+        total = self.repository.count(search=search)
+
+        total_pages = (total + page_size - 1) // page_size
+
+        return users, {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        }
 
     def get_user(self, user_id):
 
