@@ -79,6 +79,8 @@ class UserQuerySchema(Schema):
         validate=validate.Range(min=1, max=100),
     )
     search = fields.String(load_default=None)
+    role = fields.String(load_default=None)
+    is_active = fields.Boolean(load_default=None)
 
 
 user_query_schema = UserQuerySchema()

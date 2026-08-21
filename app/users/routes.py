@@ -26,10 +26,16 @@ def get_users():
     page = query["page"]
     page_size = query["page_size"]
     search = query["search"]
+    role = query["role"]
+    is_active = query["is_active"]
     with SessionLocal() as session:
         service = UserService(session)
         users, pagination = service.get_users(
-            page=page, page_size=page_size, search=search
+            page=page,
+            page_size=page_size,
+            search=search,
+            role=role,
+            is_active=is_active,
         )
 
         return {
