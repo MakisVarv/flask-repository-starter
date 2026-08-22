@@ -11,12 +11,12 @@ python-dotenv = "*"
 alembic = "*"
 marshmallow = "*"
 flask-jwt-extended = "*"
-pytest = "*"
-pytest-cov = "*"
 
 [dev-packages]
 black = "*"
 ruff = "*"
+pytest = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.14"

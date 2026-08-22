@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, ValidationError, fields, validate, validates_schema
 
 from app.roles.schema import RoleSchema
 
@@ -60,6 +60,11 @@ class UpdateUserSchema(Schema):
     phone = fields.String(
         allow_none=True,
     )
+
+    @validates_schema
+    def validate_not_empty(self, data, **kwargs):
+        if not data:
+            raise ValidationError("At least one field must be provided.")
 
 
 class AssignRoleSchema(Schema):

@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, validate, ValidationError, validates_schema
+from marshmallow import Schema, ValidationError, fields, validate, validates_schema
 
 
 class LoginSchema(Schema):
