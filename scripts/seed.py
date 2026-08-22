@@ -1,14 +1,14 @@
-# type: ignore
 import os
 
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.permissions.model import Permission
 from app.roles.model import Role
 from app.users.repository import UserRepository
 from app.users.service import UserService
 
-PERMISSIONS = [
+PERMISSIONS: list[dict[str, str]] = [
     # Users
     {"name": "user.read", "description": "Read user information"},
     {"name": "user.create", "description": "Create users"},
@@ -32,7 +32,7 @@ PERMISSIONS = [
     # Dashboard
     {"name": "dashboard.read", "description": "View dashboard"},
 ]
-ROLES = [
+ROLES: list[dict[str, str]] = [
     {
         "name": "Admin",
         "description": "Full system administrator",
@@ -42,10 +42,13 @@ ROLES = [
         "description": "Standard system user",
     },
 ]
-ROLE_PERMISSIONS = {"Admin": [permission["name"] for permission in PERMISSIONS]}
+
+ROLE_PERMISSIONS: dict[str, list[str]] = {
+    "Admin": [permission["name"] for permission in PERMISSIONS]
+}
 
 
-def seed_permissions(session):
+def seed_permissions(session: Session) -> None:
 
     print("Starting permission seed...")
 
@@ -72,7 +75,7 @@ def seed_permissions(session):
     print("Commit completed.")
 
 
-def seed_roles(session):
+def seed_roles(session: Session) -> None:
     print("Starting roles seed")
     for role in ROLES:
 
@@ -93,7 +96,7 @@ def seed_roles(session):
     print("Commit completed.")
 
 
-def seed_role_permissions(session):
+def seed_role_permissions(session: Session) -> None:
     print("Starting role-permission seed...")
 
     for role_name, permission_names in ROLE_PERMISSIONS.items():
@@ -123,7 +126,7 @@ def seed_role_permissions(session):
     print("Role-permission commit completed.")
 
 
-def seed_admin(session):
+def seed_admin(session: Session) -> None:
     print("Starting admin seed...")
 
     email = os.getenv("ADMIN_EMAIL")
@@ -133,19 +136,27 @@ def seed_admin(session):
 
     if not email or not password:
         raise RuntimeError("ADMIN_EMAIL and ADMIN_PASSWORD must be configured.")
+    if len(password) < 8:
+        raise RuntimeError("ADMIN_PASSWORD must be at least 8 characters.")
 
     user_repository = UserRepository(session)
 
     existing = user_repository.get_by_email(email)
 
-    if existing:
-        print("Admin user already exists.")
-        return
-
     admin_role = session.scalar(select(Role).where(Role.name == "Admin"))
 
     if admin_role is None:
         raise RuntimeError("Admin role does not exist.")
+
+    if existing:
+        if existing.role_id != admin_role.id:
+            existing.role_id = admin_role.id
+            session.commit()
+            print("Existing user promoted to Admin.")
+        else:
+            print("Admin user already exists.")
+
+        return
 
     user_service = UserService(session)
 
