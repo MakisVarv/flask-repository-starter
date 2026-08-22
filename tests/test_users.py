@@ -2,6 +2,17 @@ from app.config.database import SessionLocal
 from app.users import UserRepository
 
 
+def get_admin_token(client, admin_user):
+    response = client.post(
+        "/api/auth/login",
+        json=admin_user,
+    )
+
+    assert response.status_code == 200
+
+    return response.get_json()["access_token"]
+
+
 def test_user_read(client, admin_user, regular_user):
     login_response = client.post(
         "/api/auth/login",
@@ -153,3 +164,103 @@ def test_regular_user_cannot_create_user(client, regular_user, user_role):
         created_user = user_repository.get_by_email("jane@example.com")
 
         assert created_user is None
+
+
+def test_users_pagination(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?page=1&page_size=1",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert len(data["items"]) == 1
+
+    assert data["pagination"]["page"] == 1
+    assert data["pagination"]["page_size"] == 1
+    assert data["pagination"]["total"] == 2
+    assert data["pagination"]["total_pages"] == 2
+
+
+def test_users_search(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?search=john",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    assert len(data["items"]) == 1
+    assert data["items"][0]["email"] == regular_user["email"]
+
+    assert data["pagination"]["total"] == 1
+    assert data["pagination"]["total_pages"] == 1
+
+
+def test_users_filter_by_role(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?role=User",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    assert len(data["items"]) == 1
+    assert data["items"][0]["email"] == regular_user["email"]
+    assert data["items"][0]["role"]["name"] == "User"
+
+    assert data["pagination"]["total"] == 1
+
+
+def test_users_filter_inactive(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(regular_user["id"])
+
+        assert user is not None
+
+        user.is_active = False
+        session.commit()
+
+    response = client.get(
+        "/api/users/?is_active=false",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    assert len(data["items"]) == 1
+    assert data["items"][0]["email"] == regular_user["email"]
+    assert data["items"][0]["is_active"] is False
+
+    assert data["pagination"]["total"] == 1
+
+
+def test_users_reject_invalid_page_size(client, admin_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?page_size=101",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 400
+    assert "errors" in data
+    assert "page_size" in data["errors"]

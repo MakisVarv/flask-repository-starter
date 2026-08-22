@@ -114,7 +114,7 @@ def test_login_with_unknown_email(client):
     assert data["message"] == "Invalid email or password."
 
 
-def test_logged_in_user_jwt(client, regular_user):
+def test_regular_user_without_permission_is_forbidden(client, regular_user):
     credentials = {
         "email": regular_user["email"],
         "password": regular_user["password"],
@@ -160,11 +160,6 @@ def test_invalid_token(client):
         "/api/users/",
         headers={"Authorization": f"Bearer {access_token}"},
     )
-    assert second_response.status_code == 401
-
-
-def test_no_token(client):
-    second_response = client.get("/api/users/")
     assert second_response.status_code == 401
 
 
@@ -236,3 +231,133 @@ def test_register_missing_password(client):
     assert "errors" in data
     assert "password" in data["errors"]
     assert "Missing data for required field." in data["errors"]["password"]
+
+
+def test_me(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+    data = login_response.get_json()
+    assert login_response.status_code == 200
+    assert "access_token" in data
+    assert isinstance(data["access_token"], str)
+    access_token = data["access_token"]
+    me_response = client.get(
+        "/api/auth/me", headers={"Authorization": f"Bearer {access_token}"}
+    )
+    me_data = me_response.get_json()
+    assert me_response.status_code == 200
+    assert "email" in me_data
+    assert me_data["email"] == credentials["email"]
+    assert me_data["id"] == str(regular_user["id"])
+
+
+def test_update_me(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    payload = {
+        "first_name": "Johnny",
+        "last_name": "Updated",
+        "phone": "123456789",
+    }
+
+    response = client.patch(
+        "/api/auth/me",
+        json=payload,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert data["first_name"] == "Johnny"
+    assert data["last_name"] == "Updated"
+    assert data["phone"] == "123456789"
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(regular_user["id"])
+
+        assert user is not None
+        assert user.first_name == "Johnny"
+        assert user.last_name == "Updated"
+        assert user.phone == "123456789"
+
+
+def test_invalid_update_me(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    payload = {}
+
+    response = client.patch(
+        "/api/auth/me",
+        json=payload,
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert response.status_code == 400
+
+    data = response.get_json()
+
+    assert "errors" in data
+    assert "_schema" in data["errors"]
+    assert "At least one field must be provided." in data["errors"]["_schema"]
+
+
+def test_inactive_user_cannot_use_existing_token(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    assert login_response.status_code == 200
+
+    access_token = login_response.get_json()["access_token"]
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(regular_user["id"])
+
+        assert user is not None
+
+        user.is_active = False
+        session.commit()
+
+    response = client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 401
+    assert data["message"] == "Account is inactive."
