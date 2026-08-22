@@ -1,6 +1,5 @@
 # type: ignore
 from flask import Blueprint, request
-from flask_jwt_extended import jwt_required
 
 from app.auth.authorization import permission_required
 from app.config.database import SessionLocal
@@ -21,7 +20,6 @@ role_bp = Blueprint(
 
 
 @role_bp.get("/")
-@jwt_required()
 @permission_required("role.read")
 def get_roles():
     with SessionLocal() as session:
@@ -32,7 +30,6 @@ def get_roles():
 
 
 @role_bp.get("/<uuid:role_id>")
-@jwt_required()
 @permission_required("role.read")
 def get_role(role_id):
 
@@ -44,7 +41,6 @@ def get_role(role_id):
         return role_schema.dump(role)
 
 
-@jwt_required()
 @role_bp.post("/")
 @permission_required("role.create")
 def create_role():
@@ -66,7 +62,6 @@ def create_role():
 
 
 @role_bp.patch("/<uuid:role_id>")
-@jwt_required()
 @permission_required("role.update")
 def update_role(role_id):
 
@@ -81,7 +76,6 @@ def update_role(role_id):
 
 
 @role_bp.delete("/<uuid:role_id>")
-@jwt_required()
 @permission_required("role.delete")
 def delete_role(role_id):
 
@@ -97,7 +91,6 @@ def delete_role(role_id):
 
 
 @role_bp.post("/<uuid:role_id>/permissions")
-@jwt_required()
 @permission_required("role.assign_permission")
 def assign_permission(role_id):
     data = add_permission_schema.load(request.get_json())
@@ -114,7 +107,6 @@ def assign_permission(role_id):
 
 
 @role_bp.delete("/<uuid:role_id>/permissions/<uuid:permission_id>")
-@jwt_required()
 @permission_required("role.assign_permission")
 def remove_permission(role_id, permission_id):
     with SessionLocal() as session:

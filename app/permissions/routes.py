@@ -1,6 +1,5 @@
 # type: ignore
 from flask import Blueprint, request
-from flask_jwt_extended import jwt_required
 
 from app.auth.authorization import permission_required
 from app.config.database import SessionLocal
@@ -20,7 +19,6 @@ permission_bp = Blueprint(
 
 
 @permission_bp.get("/")
-@jwt_required()
 @permission_required("permission.read")
 def get_permissions():
     with SessionLocal() as session:
@@ -31,7 +29,6 @@ def get_permissions():
 
 
 @permission_bp.get("/<uuid:permission_id>")
-@jwt_required()
 @permission_required("permission.read")
 def get_permission(permission_id):
 
@@ -44,7 +41,6 @@ def get_permission(permission_id):
 
 
 @permission_bp.post("/")
-@jwt_required()
 @permission_required("permission.create")
 def create_permission():
 
@@ -65,7 +61,6 @@ def create_permission():
 
 
 @permission_bp.patch("/<uuid:permission_id>")
-@jwt_required()
 @permission_required("permission.update")
 def update_permission(permission_id):
 
@@ -80,7 +75,6 @@ def update_permission(permission_id):
 
 
 @permission_bp.delete("/<uuid:permission_id>")
-@jwt_required()
 @permission_required("permission.delete")
 def delete_permission(permission_id):
 
