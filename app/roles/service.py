@@ -1,9 +1,12 @@
 import uuid
+from collections.abc import Sequence
+from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.common.exceptions.base_exception import AppException
 from app.common.exceptions.not_found import NotFoundException
+from app.permissions.model import Permission
 from app.permissions.repository import PermissionRepository
 from app.roles.model import Role
 from app.roles.repository import RoleRepository
@@ -15,7 +18,7 @@ class RoleService:
         self.repository = RoleRepository(session)
         self.permission_repository = PermissionRepository(session)
 
-    def get_permission(self, permission_id: uuid.UUID):
+    def get_permission(self, permission_id: uuid.UUID) -> Permission:
         permission = self.permission_repository.get_by_id(permission_id)
 
         if permission is None:
@@ -48,11 +51,11 @@ class RoleService:
             self.session.rollback()
             raise
 
-    def get_roles(self):
+    def get_roles(self) -> Sequence[Role]:
 
         return self.repository.get_all()
 
-    def get_role(self, role_id):
+    def get_role(self, role_id: uuid.UUID) -> Role:
 
         role = self.repository.get_by_id(role_id)
 
@@ -61,7 +64,7 @@ class RoleService:
 
         return role
 
-    def update_role(self, role_id: uuid.UUID, data: dict) -> Role:
+    def update_role(self, role_id: uuid.UUID, data: dict[str, Any]) -> Role:
         role = self.get_role(role_id)
         if "name" in data:
             existing = self.repository.get_by_name(data["name"])

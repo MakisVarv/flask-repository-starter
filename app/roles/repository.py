@@ -1,4 +1,6 @@
 import uuid
+from collections.abc import Sequence
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,7 +10,7 @@ from app.roles.model import Role
 
 class RoleRepository:
 
-    def __init__(self, session: Session):
+    def __init__(self, session: Session) -> None:
         self.session = session
 
     def get_by_name(self, name: str) -> Role | None:
@@ -21,20 +23,20 @@ class RoleRepository:
 
         return self.get_by_name(name) is not None
 
-    def get_all(self):
+    def get_all(self) -> Sequence[Role]:
         statement = select(Role)
         return self.session.scalars(statement).all()
 
-    def get_by_id(self, role_id: uuid.UUID):
+    def get_by_id(self, role_id: uuid.UUID) -> Role | None:
         return self.session.get(Role, role_id)
 
-    def create(self, role: Role):
+    def create(self, role: Role) -> Role:
         self.session.add(role)
         self.session.flush()
         self.session.refresh(role)
         return role
 
-    def update(self, role: Role, data: dict) -> Role:
+    def update(self, role: Role, data: dict[str, Any]) -> Role:
         if "name" in data:
             role.name = data["name"]
 

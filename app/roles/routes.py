@@ -1,4 +1,5 @@
-# type: ignore
+from typing import Any, cast
+
 from flask import Blueprint, request
 
 from app.auth.authorization import permission_required
@@ -25,8 +26,11 @@ def get_roles():
     with SessionLocal() as session:
         service = RoleService(session)
         roles = service.get_roles()
-
-        return roles_schema.dump(roles), 200
+        response = cast(
+            list[dict[str, Any]],
+            roles_schema.dump(roles),
+        )
+        return response, 200
 
 
 @role_bp.get("/<uuid:role_id>")
@@ -37,15 +41,22 @@ def get_role(role_id):
         service = RoleService(session)
 
         role = service.get_role(role_id)
+        response = cast(
+            dict[str, Any],
+            role_schema.dump(role),
+        )
 
-        return role_schema.dump(role)
+        return response, 200
 
 
 @role_bp.post("/")
 @permission_required("role.create")
 def create_role():
 
-    data = create_role_schema.load(request.get_json())
+    data = cast(
+        dict[str, Any],
+        create_role_schema.load(request.get_json()),
+    )
 
     with SessionLocal() as session:
         service = RoleService(session)
@@ -54,9 +65,12 @@ def create_role():
             name=data["name"],
             description=data.get("description"),
         )
-
-        return (
+        response = cast(
+            dict[str, Any],
             role_schema.dump(role),
+        )
+        return (
+            response,
             201,
         )
 
@@ -65,14 +79,20 @@ def create_role():
 @permission_required("role.update")
 def update_role(role_id):
 
-    data = update_role_schema.load(request.get_json())
-
+    data = cast(
+        dict[str, Any],
+        update_role_schema.load(request.get_json()),
+    )
     with SessionLocal() as session:
         service = RoleService(session)
 
         role = service.update_role(role_id, data)
+        response = cast(
+            dict[str, Any],
+            role_schema.dump(role),
+        )
 
-        return role_schema.dump(role)
+        return response, 200
 
 
 @role_bp.delete("/<uuid:role_id>")
@@ -93,8 +113,10 @@ def delete_role(role_id):
 @role_bp.post("/<uuid:role_id>/permissions")
 @permission_required("role.assign_permission")
 def assign_permission(role_id):
-    data = add_permission_schema.load(request.get_json())
-
+    data = cast(
+        dict[str, Any],
+        add_permission_schema.load(request.get_json()),
+    )
     with SessionLocal() as session:
         service = RoleService(session)
 
@@ -102,8 +124,11 @@ def assign_permission(role_id):
             role_id,
             data["permission_id"],
         )
-
-        return role_schema.dump(role), 200
+        response = cast(
+            dict[str, Any],
+            role_schema.dump(role),
+        )
+        return response, 200
 
 
 @role_bp.delete("/<uuid:role_id>/permissions/<uuid:permission_id>")
@@ -113,5 +138,8 @@ def remove_permission(role_id, permission_id):
         service = RoleService(session)
 
         role = service.remove_permission(role_id, permission_id)
-
-        return role_schema.dump(role), 200
+        response = cast(
+            dict[str, Any],
+            role_schema.dump(role),
+        )
+        return response, 200
