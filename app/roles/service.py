@@ -4,7 +4,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.common.exceptions.base_exception import AppException
+from app.common.exceptions import ConflictException
 from app.common.exceptions.not_found import NotFoundException
 from app.permissions.model import Permission
 from app.permissions.repository import PermissionRepository
@@ -33,7 +33,7 @@ class RoleService:
     ) -> Role:
 
         if self.repository.exists(name):
-            raise AppException("Role already exists.", 409)
+            ConflictException("Role already exists.")
 
         role = Role(
             name=name,
@@ -69,7 +69,7 @@ class RoleService:
         if "name" in data:
             existing = self.repository.get_by_name(data["name"])
             if existing and existing.id != role.id:
-                raise AppException("Role already exists.", 409)
+                raise ConflictException("Role already exists.")
         try:
             role = self.repository.update(role, data)
             self.session.commit()
@@ -97,7 +97,7 @@ class RoleService:
         permission = self.get_permission(permission_id)
 
         if permission in role.permissions:
-            raise AppException("Permission already assigned to role.", 409)
+            raise ConflictException("Permission already assigned to role.")
 
         try:
             role.permissions.append(permission)
@@ -117,7 +117,7 @@ class RoleService:
         permission = self.get_permission(permission_id)
 
         if permission not in role.permissions:
-            raise AppException("Permission not assigned to role.", 409)
+            raise ConflictException("Permission not assigned to role.")
 
         try:
             role.permissions.remove(permission)

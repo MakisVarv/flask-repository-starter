@@ -4,6 +4,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.common.exceptions import ConflictException
 from app.common.exceptions.base_exception import AppException
 from app.common.exceptions.not_found import NotFoundException
 from app.permissions.model import Permission
@@ -22,7 +23,7 @@ class PermissionService:
     ) -> Permission:
 
         if self.repository.exists(name):
-            raise AppException("Permission already exists.", 409)
+            raise ConflictException("Permission already exists.")
 
         permission = Permission(
             name=name,
@@ -56,7 +57,7 @@ class PermissionService:
         if "name" in data:
             existing = self.repository.get_by_name(data["name"])
             if existing and existing.id != permission.id:
-                raise AppException("Permission already exists.", 409)
+                raise ConflictException("Permission already exists.")
         try:
             permission = self.repository.update(permission, data)
             self.session.commit()

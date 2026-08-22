@@ -41,8 +41,7 @@ def register_error_handlers(app):
 
     @app.errorhandler(Exception)
     def handle_exception(error):
-
-        print(error)
+        app.logger.exception("Unhandled exception", exc_info=error)
 
         return (
             jsonify({"message": "Internal server error."}),
