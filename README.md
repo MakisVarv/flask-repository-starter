@@ -25,14 +25,18 @@ This repository keeps that foundation in one focused project so it can be:
 - Marshmallow request/response validation
 - JWT authentication with Flask-JWT-Extended
 - User registration and login
-- Authenticated current-user endpoint
+- Current-user profile viewing and editing
 - Role-based access model
 - Fine-grained permissions
 - User, role, and permission management
+- User pagination, search, and filtering
 - Role-permission assignment
 - Centralized application error handling
 - Alembic database migrations
 - Idempotent seed script
+- Separate PostgreSQL test database
+- Pytest integration tests
+- Coverage reporting with pytest-cov
 - Pipenv dependency management
 - Ruff and Black development tooling
 
@@ -46,6 +50,8 @@ This repository keeps that foundation in one focused project so it can be:
 | Migrations                 | Alembic            |
 | Authentication             | Flask-JWT-Extended |
 | Validation / Serialization | Marshmallow        |
+| Testing                    | Pytest             |
+| Coverage                   | pytest-cov         |
 | PostgreSQL Driver          | psycopg            |
 | Environment Configuration  | python-dotenv      |
 | Dependency Management      | Pipenv             |
@@ -57,16 +63,34 @@ This repository keeps that foundation in one focused project so it can be:
 The application separates responsibilities into four main layers:
 
 **Routes**
-Handle HTTP concerns such as request parsing, authentication decorators, response payloads, and status codes.
+
+Handle HTTP concerns such as request parsing, authentication and authorization decorators, response payloads, and status codes.
 
 **Services**
-Contain application rules and coordinate operations between repositories and related domain objects.
+
+Contain application rules, coordinate repositories, enforce application-level behavior, and own transaction boundaries.
 
 **Repositories**
-Encapsulate database queries and persistence operations.
+
+Encapsulate database queries and persistence operations without owning transaction commits.
 
 **Models**
+
 Define SQLAlchemy entities and relationships.
+
+The typical request flow is:
+
+```text
+HTTP Request
+    ↓
+Route
+    ↓
+Service
+    ↓
+Repository
+    ↓
+SQLAlchemy / PostgreSQL
+```
 
 This keeps HTTP, application logic, and persistence concerns from becoming tightly coupled and makes the project easier to extend and test.
 
@@ -80,10 +104,35 @@ The starter includes three generic authorization entities:
 
 The seed currently creates two baseline roles:
 
-- **Admin** — receives all seeded management permissions.
+- **Admin** — receives all seeded permissions.
 - **User** — the default standard-user role and intentionally receives no administrative permissions.
 
-Self-service behavior such as viewing or editing one's own profile can be handled separately through authenticated identity/ownership rules rather than granting broad user-management permissions.
+Permissions are action-oriented, for example:
+
+```text
+user.read
+user.create
+user.update
+user.delete
+user.change_role
+
+role.read
+role.create
+role.update
+role.delete
+role.assign_permission
+
+permission.read
+permission.create
+permission.update
+permission.delete
+
+dashboard.read
+```
+
+`dashboard.read` is included as a simple example of a permission that can later represent business-facing functionality when this starter is extended into a real application.
+
+Self-service behavior such as viewing or editing one's own profile is handled separately through authenticated identity and ownership rules rather than by granting broad administrative user-management permissions.
 
 ## Project Structure
 
@@ -102,11 +151,13 @@ Self-service behavior such as viewing or editing one's own profile can be handle
 ├── migrations/
 ├── scripts/
 │   └── seed.py
+├── tests/
 ├── .env.example
 ├── .gitignore
 ├── alembic.ini
 ├── Pipfile
 ├── Pipfile.lock
+├── pytest.ini
 ├── README.md
 └── run.py
 ```
@@ -134,23 +185,29 @@ cd flask-repository-starter
 pipenv install --dev
 ```
 
-### 3. Create a PostgreSQL database
+### 3. Create PostgreSQL databases
 
-For local development, create a database such as:
+Create a development database and a separate test database.
+
+For example:
 
 ```text
 starter_db_dev
+starter_db_test
 ```
 
-For example, from `psql`:
+From `psql`:
 
 ```sql
 CREATE DATABASE starter_db_dev;
+CREATE DATABASE starter_db_test;
 ```
+
+Keeping tests on a separate database prevents test execution from affecting development data.
 
 ### 4. Configure environment variables
 
-Copy the example file:
+Copy the example environment file:
 
 ```bash
 cp .env.example .env
@@ -160,6 +217,8 @@ Then provide your local values:
 
 ```env
 DATABASE_URL=postgresql+psycopg://postgres:YOUR_PASSWORD@localhost:5432/starter_db_dev
+TEST_DATABASE_URL=postgresql+psycopg://postgres:YOUR_PASSWORD@localhost:5432/starter_db_test
+
 JWT_SECRET_KEY=YOUR_SECURE_RANDOM_SECRET
 
 ADMIN_EMAIL=admin@example.com
@@ -168,13 +227,19 @@ ADMIN_FIRST_NAME=System
 ADMIN_LAST_NAME=Admin
 ```
 
+`ADMIN_PASSWORD` must contain at least 8 characters.
+
 Never commit the real `.env` file.
 
 ### 5. Apply database migrations
 
+Apply the current schema to the development database:
+
 ```bash
 pipenv run alembic upgrade head
 ```
+
+The test database must also have the current Alembic migrations applied before running the test suite.
 
 ### 6. Seed authorization data
 
@@ -182,7 +247,15 @@ pipenv run alembic upgrade head
 pipenv run python -m scripts.seed
 ```
 
-The seed creates the baseline permissions, `Admin` and `User` roles, assigns management permissions to `Admin`, and creates the initial administrator account.
+The seed:
+
+- creates the baseline permissions;
+- creates the `Admin` and `User` roles;
+- assigns all seeded permissions to `Admin`;
+- creates the configured administrator account;
+- promotes an existing account with `ADMIN_EMAIL` to the `Admin` role when necessary.
+
+The seed is designed to be idempotent and can be run again without recreating existing roles, permissions, or users.
 
 ### 7. Start the application
 
@@ -200,11 +273,14 @@ http://127.0.0.1:5000
 
 ### Authentication
 
-| Method | Endpoint             | Purpose                                  |
-| ------ | -------------------- | ---------------------------------------- |
-| `POST` | `/api/auth/register` | Register a standard user                 |
-| `POST` | `/api/auth/login`    | Authenticate and receive an access token |
-| `GET`  | `/api/auth/me`       | Return the authenticated user            |
+| Method  | Endpoint             | Purpose                                  |
+| ------- | -------------------- | ---------------------------------------- |
+| `POST`  | `/api/auth/register` | Register a standard user                 |
+| `POST`  | `/api/auth/login`    | Authenticate and receive an access token |
+| `GET`   | `/api/auth/me`       | Return the authenticated user            |
+| `PATCH` | `/api/auth/me`       | Update the authenticated user's profile  |
+
+The current-user update endpoint allows self-service profile fields such as first name, last name, and phone to be changed without granting administrative user-management permissions.
 
 ### Users
 
@@ -216,6 +292,38 @@ http://127.0.0.1:5000
 | `PATCH`  | `/api/users/<user_id>`      | `user.update`      |
 | `DELETE` | `/api/users/<user_id>`      | `user.delete`      |
 | `PATCH`  | `/api/users/<user_id>/role` | `user.change_role` |
+
+`GET /api/users/` supports pagination, search, and filtering.
+
+Example:
+
+```text
+/api/users/?page=1&page_size=10&search=john&role=Admin&is_active=true
+```
+
+Supported query parameters:
+
+- `page` — page number starting at `1`
+- `page_size` — number of results per page, from `1` to `100`
+- `search` — searches first name, last name, and email
+- `role` — filters by role name
+- `is_active` — filters active or inactive users
+
+Example response:
+
+```json
+{
+  "items": [],
+  "pagination": {
+    "page": 1,
+    "page_size": 10,
+    "total": 0,
+    "total_pages": 0
+  }
+}
+```
+
+Pagination totals are calculated using the same filters applied to the returned user list.
 
 ### Roles
 
@@ -243,13 +351,73 @@ http://127.0.0.1:5000
 
 Authentication and authorization are intentionally separate concerns.
 
-A valid JWT proves that a request belongs to an authenticated user.
+A valid JWT proves that a request contains an authenticated identity.
 
-Administrative routes then use permission checks to determine whether that user's role is allowed to perform the requested action.
+Authentication-only endpoints such as `/api/auth/me` use that identity to resolve the current user.
 
-This makes authorization more flexible than hardcoding checks such as `role == "Admin"` throughout the application. New roles can be introduced later by assigning the appropriate permissions instead of rewriting route logic.
+Administrative routes use permission checks to determine whether the authenticated user's role is allowed to perform the requested action.
+
+Permission-protected routes verify the JWT and then resolve the current user from the database before checking permissions assigned through that user's role.
+
+This means account state continues to be enforced after a token has been issued. For example, if an account becomes inactive, an otherwise valid existing JWT can no longer be used to access authenticated application functionality.
+
+The authorization model avoids hardcoded checks such as:
+
+```python
+if user.role.name == "Admin":
+    ...
+```
+
+Instead, routes depend on named permissions such as:
+
+```text
+user.read
+role.update
+permission.create
+```
+
+New roles can therefore be introduced later by assigning the appropriate permissions instead of rewriting route logic.
+
+Administrative user-management routes and self-service routes are deliberately separated.
+
+For example:
+
+```text
+GET /api/users/<user_id>
+```
+
+requires `user.read`, even when a user attempts to request their own ID.
+
+Self-service access instead belongs to:
+
+```text
+GET /api/auth/me
+PATCH /api/auth/me
+```
+
+This keeps ownership-based behavior separate from administrative authorization.
+
+## Database and Transaction Boundaries
+
+The project uses explicit SQLAlchemy sessions.
+
+Repositories are responsible for persistence operations such as:
+
+- querying;
+- adding entities;
+- updating entities;
+- deleting entities;
+- flushing and refreshing when necessary.
+
+Repositories do not own transaction commits.
+
+Services coordinate application operations and own commit and rollback behavior.
+
+This keeps transaction boundaries at the application-service level rather than scattering them across persistence methods.
 
 ## Database Migrations
+
+Database schema changes are managed with Alembic.
 
 After changing SQLAlchemy models:
 
@@ -263,6 +431,54 @@ Then run:
 
 ```bash
 pipenv run alembic upgrade head
+```
+
+The application does not rely on automatic table creation at startup. Schema evolution should happen through migrations.
+
+## Testing
+
+The project uses Pytest with a dedicated PostgreSQL test database configured through:
+
+```env
+TEST_DATABASE_URL
+```
+
+The test database should have the current Alembic migrations applied before running the suite.
+
+Run the tests with:
+
+```bash
+pipenv run pytest
+```
+
+The test infrastructure wraps each test in a database transaction and rolls that transaction back afterward.
+
+This allows tests to exercise real PostgreSQL and SQLAlchemy behavior while keeping tests isolated from one another.
+
+The suite includes representative coverage for:
+
+- registration;
+- login;
+- invalid credentials;
+- JWT authentication;
+- permission enforcement;
+- current-user retrieval;
+- current-user profile updates;
+- inactive-account enforcement;
+- administrative user access;
+- user creation;
+- pagination;
+- search;
+- role filtering;
+- active/inactive filtering;
+- query validation.
+
+Coverage reporting is configured through `pytest.ini` using `pytest-cov`.
+
+Running the test suite generates terminal coverage information and an HTML coverage report in:
+
+```text
+htmlcov/
 ```
 
 ## Development Tools
@@ -279,43 +495,61 @@ Run Black:
 pipenv run black .
 ```
 
+Run the test suite:
+
+```bash
+pipenv run pytest
+```
+
+These commands provide a simple local quality workflow without requiring additional infrastructure.
+
 ## Design Goals
 
 This starter deliberately favors:
 
 - clear responsibility boundaries over large framework abstractions;
 - explicit SQLAlchemy session handling;
+- service-owned transaction boundaries;
 - reusable authentication and authorization infrastructure;
+- permission-based authorization instead of hardcoded role checks;
+- ownership-aware self-service endpoints;
 - small, understandable layers;
 - migrations instead of automatic table creation;
 - configuration through environment variables;
+- isolated integration testing against PostgreSQL;
 - domain independence.
 
-It is **not** intended to contain every feature a Flask application could need. Business-domain models, background jobs, caching, external integrations, and other infrastructure should be added only when a real project requires them.
+It is **not** intended to contain every feature a Flask application could need.
+
+Business-domain models, background jobs, caching, external integrations, queues, scheduled jobs, and other infrastructure should be added only when a real project requires them.
+
+The starter provides a foundation rather than attempting to predict every future application's architecture.
 
 ## Possible Next Improvements
 
-Useful future extensions include:
+Useful future engineering extensions include:
 
-- unit and integration tests;
-- test database configuration;
-- coverage reporting;
 - pre-commit hooks;
 - Docker development setup;
 - GitHub Actions CI;
-- automated lint/test checks;
+- automated lint and test checks;
 - deployment configuration.
+
+These should be introduced when they provide practical value rather than simply increasing the number of tools in the project.
 
 ## Using This Starter
 
 For a new application:
 
 1. create a project from this repository;
-2. configure its database and secrets;
-3. keep the authentication/authorization foundation;
-4. add the new application's domain models and repositories;
-5. build business features vertically through repository, service, and route layers;
-6. add project-specific permissions only when they represent real authorization requirements.
+2. configure its development and test databases;
+3. configure application secrets and administrator credentials;
+4. apply migrations;
+5. run the seed;
+6. keep the authentication and authorization foundation;
+7. add the new application's domain models and repositories;
+8. build business features vertically through model, repository, service, and route layers;
+9. introduce project-specific permissions when they represent real authorization requirements;
+10. extend testing around the new business behavior.
 
 The goal is to provide a strong starting point without dictating the business domain that comes next.
-:::
