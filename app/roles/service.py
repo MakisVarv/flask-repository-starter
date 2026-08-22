@@ -33,7 +33,7 @@ class RoleService:
     ) -> Role:
 
         if self.repository.exists(name):
-            ConflictException("Role already exists.")
+            raise ConflictException("Role already exists.")
 
         role = Role(
             name=name,

@@ -5,7 +5,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.common.exceptions import ConflictException
-from app.common.exceptions.base_exception import AppException
 from app.common.exceptions.not_found import NotFoundException
 from app.permissions.model import Permission
 from app.permissions.repository import PermissionRepository
