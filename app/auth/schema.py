@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, ValidationError, validates_schema
 
 
 class LoginSchema(Schema):
@@ -36,6 +36,11 @@ class UpdateMeSchema(Schema):
         required=False,
         allow_none=True,
     )
+
+    @validates_schema
+    def validate_not_empty(self, data, **kwargs):
+        if not data:
+            raise ValidationError("At least one field must be provided.")
 
 
 update_me_schema = UpdateMeSchema()

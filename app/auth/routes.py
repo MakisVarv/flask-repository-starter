@@ -1,5 +1,5 @@
-# type: ignore
 import uuid
+from typing import Any, cast
 
 from flask import Blueprint, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -18,8 +18,10 @@ auth_bp = Blueprint(
 
 @auth_bp.post("/register")
 def register():
-    data = register_schema.load(request.get_json())
-
+    data = cast(
+        dict[str, Any],
+        register_schema.load(request.get_json()),
+    )
     with SessionLocal() as session:
         service = AuthService(session)
 
@@ -30,14 +32,21 @@ def register():
             password=data["password"],
             phone=data.get("phone"),
         )
+        response = cast(
+            dict[str, Any],
+            user_schema.dump(user),
+        )
 
-        return user_schema.dump(user), 201
+        return response, 201
 
 
 @auth_bp.post("/login")
 def login():
-    data = login_schema.load(request.get_json())
 
+    data = cast(
+        dict[str, Any],
+        login_schema.load(request.get_json()),
+    )
     with SessionLocal() as session:
         service = AuthService(session)
 
@@ -45,10 +54,13 @@ def login():
             email=data["email"],
             password=data["password"],
         )
-
+        user_response = cast(
+            dict[str, Any],
+            user_schema.dump(user),
+        )
         return {
             "access_token": access_token,
-            "user": user_schema.dump(user),
+            "user": user_response,
         }, 200
 
 
@@ -61,17 +73,28 @@ def me():
         service = AuthService(session)
         user = service.get_current_user(user_id)
 
-        return user_schema.dump(user), 200
+        response = cast(
+            dict[str, Any],
+            user_schema.dump(user),
+        )
+        return response, 200
 
 
 @auth_bp.patch("/me")
 @jwt_required()
 def update_me():
     user_id = uuid.UUID(get_jwt_identity())
-    data = update_me_schema.load(request.get_json())
+    data = cast(
+        dict[str, Any],
+        update_me_schema.load(request.get_json()),
+    )
 
     with SessionLocal() as session:
         service = AuthService(session)
         user = service.update_current_user(user_id, data)
 
-        return user_schema.dump(user), 200
+        response = cast(
+            dict[str, Any],
+            user_schema.dump(user),
+        )
+        return response, 200

@@ -1,3 +1,6 @@
+import uuid
+from typing import Any
+
 from flask_jwt_extended import create_access_token
 from sqlalchemy.orm import Session
 from werkzeug.security import check_password_hash
@@ -5,10 +8,11 @@ from werkzeug.security import check_password_hash
 from app.common.exceptions import NotFoundException, UnauthorizedException
 from app.roles import RoleRepository
 from app.users import UserRepository, UserService
+from app.users.model import User
 
 
 class AuthService:
-    def __init__(self, session: Session):
+    def __init__(self, session: Session) -> None:
         self.session = session
         self.role_repository = RoleRepository(session)
         self.user_service = UserService(session)
@@ -21,7 +25,7 @@ class AuthService:
         email: str,
         password: str,
         phone: str | None = None,
-    ):
+    ) -> User:
         user_role = self.role_repository.get_by_name("User")
 
         if user_role is None:
@@ -40,7 +44,7 @@ class AuthService:
         self,
         email: str,
         password: str,
-    ):
+    ) -> tuple[User, str]:
 
         user = self.user_repository.get_by_email(email)
 
@@ -58,7 +62,7 @@ class AuthService:
 
         return user, access_token
 
-    def get_current_user(self, user_id):
+    def get_current_user(self, user_id: uuid.UUID) -> User:
         user = self.user_repository.get_by_id(user_id)
 
         if user is None:
@@ -69,7 +73,7 @@ class AuthService:
 
         return user
 
-    def update_current_user(self, user_id, data):
+    def update_current_user(self, user_id: uuid.UUID, data: dict[str, Any]) -> User:
         user = self.get_current_user(user_id)
         if "first_name" in data:
             user.first_name = data["first_name"]
