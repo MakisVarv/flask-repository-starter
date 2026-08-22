@@ -1,4 +1,6 @@
 import uuid
+from collections.abc import Sequence
+from typing import Any
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -14,7 +16,7 @@ class UserRepository:
     def _apply_filters(
         self,
         statement,
-        search=None,
+        search: str | None = None,
         role: str | None = None,
         is_active: bool | None = None,
     ):
@@ -51,16 +53,21 @@ class UserRepository:
         search: str | None = None,
         role: str | None = None,
         is_active: bool | None = None,
-    ):
+    ) -> Sequence[User]:
 
         offset = (page - 1) * page_size
         statement = select(User)
-        statement = self._apply_filters(statement, search, role, is_active)
+        statement = self._apply_filters(
+            statement,
+            search=search,
+            role=role,
+            is_active=is_active,
+        )
 
         statement = statement.order_by(User.id).offset(offset).limit(page_size)
         return self.session.scalars(statement).all()
 
-    def get_by_id(self, user_id: uuid.UUID):
+    def get_by_id(self, user_id: uuid.UUID) -> User | None:
         return self.session.get(User, user_id)
 
     def count(
@@ -68,18 +75,23 @@ class UserRepository:
         search: str | None = None,
         role: str | None = None,
         is_active: bool | None = None,
-    ):
+    ) -> int:
         statement = select(func.count(User.id))
-        statement = self._apply_filters(statement, search, role, is_active)
+        statement = self._apply_filters(
+            statement,
+            search=search,
+            role=role,
+            is_active=is_active,
+        )
         return self.session.scalar(statement) or 0
 
-    def create(self, user: User):
+    def create(self, user: User) -> User:
         self.session.add(user)
         self.session.flush()
         self.session.refresh(user)
         return user
 
-    def update(self, user: User, data: dict) -> User:
+    def update(self, user: User, data: dict[str, Any]) -> User:
 
         allowed_fields = {"first_name", "last_name", "email", "phone"}
 

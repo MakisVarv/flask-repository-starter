@@ -1,6 +1,6 @@
-# type: ignore
+from typing import Any, cast
+
 from flask import Blueprint, request
-from flask_jwt_extended import jwt_required
 
 from app.auth.authorization import permission_required
 from app.config.database import SessionLocal
@@ -18,10 +18,12 @@ user_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
 
 @user_bp.get("/")
-@jwt_required()
 @permission_required("user.read")
 def get_users():
-    query = user_query_schema.load(request.args)
+    query = cast(
+        dict[str, Any],
+        user_query_schema.load(request.args),
+    )
 
     page = query["page"]
     page_size = query["page_size"]
@@ -45,7 +47,6 @@ def get_users():
 
 
 @user_bp.get("/<uuid:user_id>")
-@jwt_required()
 @permission_required("user.read")
 def get_user(user_id):
 
@@ -54,42 +55,56 @@ def get_user(user_id):
 
         user = service.get_user(user_id)
 
-        return user_schema.dump(user)
+        response = cast(
+            dict[str, Any],
+            user_schema.dump(user),
+        )
+
+        return response, 200
 
 
 @user_bp.post("/")
-@jwt_required()
 @permission_required("user.create")
 def create_user():
-    data = create_user_schema.load(request.get_json())
+    data = cast(
+        dict[str, Any],
+        create_user_schema.load(request.get_json()),
+    )
 
     with SessionLocal() as session:
         service = UserService(session)
 
         user = service.create_user(**data)
 
-        return (
+        response = cast(
+            dict[str, Any],
             user_schema.dump(user),
-            201,
         )
+
+        return response, 201
 
 
 @user_bp.patch("/<uuid:user_id>")
-@jwt_required()
 @permission_required("user.update")
 def update_user(user_id):
-    data = update_user_schema.load(request.get_json())
+    data = cast(
+        dict[str, Any],
+        update_user_schema.load(request.get_json()),
+    )
 
     with SessionLocal() as session:
         service = UserService(session)
-
         user = service.update_user(user_id, data)
 
-        return user_schema.dump(user)
+        response = cast(
+            dict[str, Any],
+            user_schema.dump(user),
+        )
+
+        return response, 200
 
 
 @user_bp.delete("/<uuid:user_id>")
-@jwt_required()
 @permission_required("user.delete")
 def delete_user(user_id):
 
@@ -105,13 +120,21 @@ def delete_user(user_id):
 
 
 @user_bp.patch("/<uuid:user_id>/role")
-@jwt_required()
 @permission_required("user.change_role")
 def change_role(user_id):
-    data = assign_role_schema.load(request.get_json())
+    data = cast(
+        dict[str, Any],
+        assign_role_schema.load(request.get_json()),
+    )
+
     with SessionLocal() as session:
         service = UserService(session)
 
         user = service.change_role(user_id, data["role_id"])
 
-        return user_schema.dump(user)
+        response = cast(
+            dict[str, Any],
+            user_schema.dump(user),
+        )
+
+        return response, 200

@@ -1,10 +1,12 @@
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash
 
 from app.common.exceptions.bad_request import BadRequestException
 from app.common.exceptions.not_found import NotFoundException
+from app.roles.model import Role
 from app.roles.repository import RoleRepository
 from app.users.model import User
 from app.users.repository import UserRepository
@@ -16,7 +18,7 @@ class UserService:
         self.repository = UserRepository(session)
         self.role_repository = RoleRepository(session)
 
-    def get_role(self, role_id: uuid.UUID):
+    def get_role(self, role_id: uuid.UUID) -> Role:
         role = self.role_repository.get_by_id(role_id)
 
         if role is None:
@@ -67,7 +69,7 @@ class UserService:
         search: str | None = None,
         role: str | None = None,
         is_active: bool | None = None,
-    ):
+    ) -> tuple[Sequence[User], dict[str, int]]:
         users = self.repository.get_all(
             page=page,
             page_size=page_size,
@@ -91,7 +93,7 @@ class UserService:
             "total_pages": total_pages,
         }
 
-    def get_user(self, user_id):
+    def get_user(self, user_id: uuid.UUID) -> User:
 
         user = self.repository.get_by_id(user_id)
 
@@ -100,8 +102,7 @@ class UserService:
 
         return user
 
-    def update_user(self, user_id, data: dict):
-        """Update an existing user."""
+    def update_user(self, user_id: uuid.UUID, data: dict) -> User:
 
         user = self.get_user(user_id)
 
