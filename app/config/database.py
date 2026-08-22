@@ -1,3 +1,4 @@
+from flask import Flask
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -8,7 +9,7 @@ class Base(DeclarativeBase):
     pass
 
 
-def init_db(app):
+def init_db(app: Flask) -> None:
     database_url = app.config["DATABASE_URL"]
 
     if not database_url:

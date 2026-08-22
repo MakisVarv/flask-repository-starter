@@ -3,20 +3,18 @@ import pytest
 from app import create_app
 from app.config.config import TestingConfig
 from app.config.database import SessionLocal
-from app.permissions import Permission
+from app.permissions.model import Permission
 from app.roles.model import Role
-from app.users import UserService
+from app.users.service import UserService
 
 
 @pytest.fixture
 def app():
-    app = create_app(TestingConfig)
+    flask_app = create_app(TestingConfig)
 
-    print("\nTEST DATABASE:", app.config["DATABASE_URL"])
+    yield flask_app
 
-    yield app
-
-    app.extensions["db_engine"].dispose()
+    flask_app.extensions["db_engine"].dispose()
 
 
 @pytest.fixture
