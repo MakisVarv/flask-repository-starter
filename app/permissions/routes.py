@@ -1,4 +1,5 @@
-# type: ignore
+from typing import Any, cast
+
 from flask import Blueprint, request
 
 from app.auth.authorization import permission_required
@@ -24,8 +25,11 @@ def get_permissions():
     with SessionLocal() as session:
         service = PermissionService(session)
         permissions = service.get_permissions()
-
-        return permissions_schema.dump(permissions), 200
+        response = cast(
+            list[dict[str, Any]],
+            permissions_schema.dump(permissions),
+        )
+        return response, 200
 
 
 @permission_bp.get("/<uuid:permission_id>")
@@ -36,16 +40,22 @@ def get_permission(permission_id):
         service = PermissionService(session)
 
         permission = service.get_permission(permission_id)
+        response = cast(
+            dict[str, Any],
+            permission_schema.dump(permission),
+        )
 
-        return permission_schema.dump(permission)
+        return response, 200
 
 
 @permission_bp.post("/")
 @permission_required("permission.create")
 def create_permission():
 
-    data = create_permission_schema.load(request.get_json())
-
+    data = cast(
+        dict[str, Any],
+        create_permission_schema.load(request.get_json()),
+    )
     with SessionLocal() as session:
         service = PermissionService(session)
 
@@ -53,9 +63,13 @@ def create_permission():
             name=data["name"],
             description=data.get("description"),
         )
+        response = cast(
+            dict[str, Any],
+            permission_schema.dump(permission),
+        )
 
         return (
-            permission_schema.dump(permission),
+            response,
             201,
         )
 
@@ -64,14 +78,19 @@ def create_permission():
 @permission_required("permission.update")
 def update_permission(permission_id):
 
-    data = update_permission_schema.load(request.get_json())
-
+    data = cast(
+        dict[str, Any],
+        update_permission_schema.load(request.get_json()),
+    )
     with SessionLocal() as session:
         service = PermissionService(session)
 
         permission = service.update_permission(permission_id, data)
-
-        return permission_schema.dump(permission)
+        response = cast(
+            dict[str, Any],
+            permission_schema.dump(permission),
+        )
+        return response, 200
 
 
 @permission_bp.delete("/<uuid:permission_id>")

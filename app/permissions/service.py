@@ -1,4 +1,6 @@
 import uuid
+from collections.abc import Sequence
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -9,7 +11,7 @@ from app.permissions.repository import PermissionRepository
 
 
 class PermissionService:
-    def __init__(self, session: Session):
+    def __init__(self, session: Session) -> None:
         self.session = session
         self.repository = PermissionRepository(session)
 
@@ -34,11 +36,11 @@ class PermissionService:
             self.session.rollback()
             raise
 
-    def get_permissions(self):
+    def get_permissions(self) -> Sequence[Permission]:
 
         return self.repository.get_all()
 
-    def get_permission(self, permission_id):
+    def get_permission(self, permission_id: uuid.UUID) -> Permission:
 
         permission = self.repository.get_by_id(permission_id)
 
@@ -47,7 +49,9 @@ class PermissionService:
 
         return permission
 
-    def update_permission(self, permission_id: uuid.UUID, data: dict) -> Permission:
+    def update_permission(
+        self, permission_id: uuid.UUID, data: dict[str, Any]
+    ) -> Permission:
         permission = self.get_permission(permission_id)
         if "name" in data:
             existing = self.repository.get_by_name(data["name"])
