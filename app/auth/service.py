@@ -2,8 +2,7 @@ from flask_jwt_extended import create_access_token
 from sqlalchemy.orm import Session
 from werkzeug.security import check_password_hash
 
-from app.common.exceptions.base_exception import AppException
-from app.common.exceptions.not_found import NotFoundException
+from app.common.exceptions import NotFoundException, UnauthorizedException
 from app.roles import RoleRepository
 from app.users import UserRepository, UserService
 
@@ -46,14 +45,14 @@ class AuthService:
         user = self.user_repository.get_by_email(email)
 
         if user is None:
-            raise AppException("Invalid email or password.", 401)
+            raise UnauthorizedException("Invalid email or password.")
 
         password_ok = check_password_hash(user.password_hash, password)
 
         if not user.is_active:
-            raise AppException("Invalid email or password.", 401)
+            raise UnauthorizedException("Invalid email or password.")
         if not password_ok:
-            raise AppException("Invalid email or password.", 401)
+            raise UnauthorizedException("Invalid email or password.")
 
         access_token = create_access_token(identity=str(user.id))
 
@@ -65,13 +64,13 @@ class AuthService:
         if user is None:
             raise NotFoundException("User")
 
+        if not user.is_active:
+            raise UnauthorizedException("Account is inactive.")
+
         return user
 
     def update_current_user(self, user_id, data):
-        user = self.user_repository.get_by_id(user_id)
-        if user is None:
-            raise NotFoundException("User")
-
+        user = self.get_current_user(user_id)
         if "first_name" in data:
             user.first_name = data["first_name"]
 
