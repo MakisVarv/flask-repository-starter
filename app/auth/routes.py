@@ -7,6 +7,7 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
     set_refresh_cookies,
+    unset_refresh_cookies,
 )
 
 from app.auth.schema import login_schema, register_schema, update_me_schema
@@ -95,6 +96,31 @@ def refresh():
             }
         )
         set_refresh_cookies(response, new_refresh_token)
+        return response, 200
+
+
+@auth_bp.post("/logout")
+@jwt_required(refresh=True, locations=["cookies"])
+def logout():
+    user_id = uuid.UUID(get_jwt_identity())
+    claims = get_jwt()
+
+    sid = uuid.UUID(claims["sid"])
+    refresh_jti = claims["jti"]
+
+    with SessionLocal() as session:
+        service = AuthService(session)
+
+        service.logout(
+            user_id=user_id,
+            sid=sid,
+            refresh_jti=refresh_jti,
+        )
+
+        response = jsonify({"message": "Logged out successfully."})
+
+        unset_refresh_cookies(response)
+
         return response, 200
 
 

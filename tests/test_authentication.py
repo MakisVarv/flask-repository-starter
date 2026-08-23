@@ -1,5 +1,6 @@
 from sqlalchemy import func, select
 
+from app.auth.model import AuthSession
 from app.config.database import SessionLocal
 from app.users import User, UserRepository
 
@@ -361,3 +362,337 @@ def test_inactive_user_cannot_use_existing_token(client, regular_user):
 
     assert response.status_code == 401
     assert data["message"] == "Account is inactive."
+
+
+def test_refresh_token(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    assert login_response.status_code == 200
+
+    original_access_token = login_response.get_json()["access_token"]
+
+    csrf_cookie = client.get_cookie("csrf_refresh_token")
+
+    assert csrf_cookie is not None
+    original_refresh_cookie = client.get_cookie(
+        "refresh_token_cookie",
+        path="/api/auth",
+    )
+
+    assert original_refresh_cookie is not None
+    refresh_response = client.post(
+        "/api/auth/refresh",
+        headers={
+            "X-CSRF-TOKEN": csrf_cookie.value,
+        },
+    )
+
+    assert refresh_response.status_code == 200
+
+    data = refresh_response.get_json()
+
+    assert "access_token" in data
+    assert isinstance(data["access_token"], str)
+    assert data["access_token"]
+    assert data["access_token"] != original_access_token
+
+    new_refresh_cookie = client.get_cookie(
+        "refresh_token_cookie",
+        path="/api/auth",
+    )
+
+    assert new_refresh_cookie is not None
+    assert new_refresh_cookie.value != original_refresh_cookie.value
+
+
+def test_old_refresh_token_cannot_be_reused(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    assert login_response.status_code == 200
+
+    old_refresh_cookie = client.get_cookie(
+        "refresh_token_cookie",
+        path="/api/auth",
+    )
+    old_csrf_cookie = client.get_cookie("csrf_refresh_token")
+
+    assert old_refresh_cookie is not None
+    assert old_csrf_cookie is not None
+
+    first_refresh_response = client.post(
+        "/api/auth/refresh",
+        headers={
+            "X-CSRF-TOKEN": old_csrf_cookie.value,
+        },
+    )
+
+    assert first_refresh_response.status_code == 200
+
+    client.set_cookie(
+        "refresh_token_cookie",
+        old_refresh_cookie.value,
+        path="/api/auth",
+    )
+
+    reuse_response = client.post(
+        "/api/auth/refresh",
+        headers={
+            "X-CSRF-TOKEN": old_csrf_cookie.value,
+        },
+    )
+
+    assert reuse_response.status_code == 401
+
+    data = reuse_response.get_json()
+    assert data["message"] == "Invalid refresh token."
+
+
+def test_logout(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    assert login_response.status_code == 200
+
+    csrf_cookie = client.get_cookie("csrf_refresh_token")
+
+    assert csrf_cookie is not None
+
+    logout_response = client.post(
+        "/api/auth/logout",
+        headers={
+            "X-CSRF-TOKEN": csrf_cookie.value,
+        },
+    )
+
+    assert logout_response.status_code == 200
+    assert logout_response.get_json()["message"] == "Logged out successfully."
+
+    refresh_cookie = client.get_cookie(
+        "refresh_token_cookie",
+        path="/api/auth",
+    )
+
+    assert refresh_cookie is None
+
+
+def test_logout_revokes_auth_session(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    assert login_response.status_code == 200
+
+    csrf_cookie = client.get_cookie("csrf_refresh_token")
+    assert csrf_cookie is not None
+
+    with SessionLocal() as session:
+        auth_session = session.scalar(
+            select(AuthSession).where(AuthSession.user_id == regular_user["id"])
+        )
+
+        assert auth_session is not None
+        assert auth_session.revoked_at is None
+
+        sid = auth_session.id
+
+    logout_response = client.post(
+        "/api/auth/logout",
+        headers={
+            "X-CSRF-TOKEN": csrf_cookie.value,
+        },
+    )
+
+    assert logout_response.status_code == 200
+
+    with SessionLocal() as session:
+        auth_session = session.get(AuthSession, sid)
+
+        assert auth_session is not None
+        assert auth_session.revoked_at is not None
+
+
+def test_revoked_session_cannot_refresh(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    assert login_response.status_code == 200
+
+    refresh_cookie = client.get_cookie(
+        "refresh_token_cookie",
+        path="/api/auth",
+    )
+    csrf_cookie = client.get_cookie("csrf_refresh_token")
+
+    assert refresh_cookie is not None
+    assert csrf_cookie is not None
+
+    logout_response = client.post(
+        "/api/auth/logout",
+        headers={
+            "X-CSRF-TOKEN": csrf_cookie.value,
+        },
+    )
+
+    assert logout_response.status_code == 200
+
+    # Restore the old refresh token that logout removed.
+    client.set_cookie(
+        "refresh_token_cookie",
+        refresh_cookie.value,
+        path="/api/auth",
+    )
+
+    refresh_response = client.post(
+        "/api/auth/refresh",
+        headers={
+            "X-CSRF-TOKEN": csrf_cookie.value,
+        },
+    )
+
+    assert refresh_response.status_code == 401
+
+    data = refresh_response.get_json()
+    assert data["message"] == "Refresh session revoked."
+
+
+def test_inactive_user_cannot_refresh(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    assert login_response.status_code == 200
+
+    csrf_cookie = client.get_cookie("csrf_refresh_token")
+    assert csrf_cookie is not None
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(regular_user["id"])
+
+        assert user is not None
+
+        user.is_active = False
+        session.commit()
+
+    refresh_response = client.post(
+        "/api/auth/refresh",
+        headers={
+            "X-CSRF-TOKEN": csrf_cookie.value,
+        },
+    )
+
+    assert refresh_response.status_code == 401
+
+    data = refresh_response.get_json()
+    assert data["message"] == "Invalid refresh session."
+
+
+def test_refresh_token_reuse_revokes_session(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    assert login_response.status_code == 200
+
+    refresh_a = client.get_cookie(
+        "refresh_token_cookie",
+        path="/api/auth",
+    )
+    csrf_a = client.get_cookie("csrf_refresh_token")
+
+    assert refresh_a is not None
+    assert csrf_a is not None
+
+    # A -> B
+    first_refresh = client.post(
+        "/api/auth/refresh",
+        headers={"X-CSRF-TOKEN": csrf_a.value},
+    )
+
+    assert first_refresh.status_code == 200
+
+    refresh_b = client.get_cookie(
+        "refresh_token_cookie",
+        path="/api/auth",
+    )
+    csrf_b = client.get_cookie("csrf_refresh_token")
+
+    assert refresh_b is not None
+    assert csrf_b is not None
+
+    # Replay old token A.
+    client.set_cookie(
+        "refresh_token_cookie",
+        refresh_a.value,
+        path="/api/auth",
+    )
+
+    replay_response = client.post(
+        "/api/auth/refresh",
+        headers={"X-CSRF-TOKEN": csrf_a.value},
+    )
+
+    assert replay_response.status_code == 401
+
+    # Try valid token B after the replay.
+    client.set_cookie(
+        "refresh_token_cookie",
+        refresh_b.value,
+        path="/api/auth",
+    )
+
+    second_refresh = client.post(
+        "/api/auth/refresh",
+        headers={"X-CSRF-TOKEN": csrf_b.value},
+    )
+
+    assert second_refresh.status_code == 401
+    assert second_refresh.get_json()["message"] == "Refresh session revoked."

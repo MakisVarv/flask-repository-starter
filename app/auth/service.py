@@ -123,6 +123,9 @@ class AuthService:
             raise UnauthorizedException("Refresh session expired.")
 
         if auth_session.current_refresh_jti != refresh_jti:
+            auth_session.revoked_at = datetime.now(timezone.utc)
+            self.session.commit()
+
             raise UnauthorizedException("Invalid refresh token.")
 
         if auth_session.user_id != user_id:
@@ -169,3 +172,25 @@ class AuthService:
         self.session.commit()
 
         return user
+
+    def logout(
+        self,
+        user_id: uuid.UUID,
+        sid: uuid.UUID,
+        refresh_jti: str,
+    ) -> None:
+
+        auth_session = self.auth_session_repository.get_by_id(sid)
+
+        if auth_session is None:
+            raise UnauthorizedException("Invalid refresh session.")
+
+        if auth_session.user_id != user_id:
+            raise UnauthorizedException("Invalid refresh session.")
+
+        if auth_session.current_refresh_jti != refresh_jti:
+            raise UnauthorizedException("Invalid refresh token.")
+
+        auth_session.revoked_at = datetime.now(timezone.utc)
+
+        self.session.commit()
