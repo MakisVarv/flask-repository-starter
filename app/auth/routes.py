@@ -1,8 +1,13 @@
 import uuid
 from typing import Any, cast
 
-from flask import Blueprint, request
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import (
+    get_jwt,
+    get_jwt_identity,
+    jwt_required,
+    set_refresh_cookies,
+)
 
 from app.auth.schema import login_schema, register_schema, update_me_schema
 from app.auth.service import AuthService
@@ -50,7 +55,7 @@ def login():
     with SessionLocal() as session:
         service = AuthService(session)
 
-        user, access_token = service.login(
+        user, access_token, refresh_token = service.login(
             email=data["email"],
             password=data["password"],
         )
@@ -58,10 +63,39 @@ def login():
             dict[str, Any],
             user_schema.dump(user),
         )
-        return {
-            "access_token": access_token,
-            "user": user_response,
-        }, 200
+        response = jsonify(
+            {
+                "access_token": access_token,
+                "user": user_response,
+            }
+        )
+        set_refresh_cookies(response, refresh_token)
+        return response, 200
+
+
+@auth_bp.post("/refresh")
+@jwt_required(refresh=True, locations=["cookies"])
+def refresh():
+    user_id = uuid.UUID(get_jwt_identity())
+
+    claims = get_jwt()
+
+    sid = uuid.UUID(claims["sid"])
+    refresh_jti = claims["jti"]
+    with SessionLocal() as session:
+        service = AuthService(session)
+        new_access_token, new_refresh_token = service.refresh(
+            user_id=user_id,
+            sid=sid,
+            refresh_jti=refresh_jti,
+        )
+        response = jsonify(
+            {
+                "access_token": new_access_token,
+            }
+        )
+        set_refresh_cookies(response, new_refresh_token)
+        return response, 200
 
 
 @auth_bp.get("/me")
