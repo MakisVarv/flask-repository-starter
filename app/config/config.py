@@ -1,5 +1,6 @@
 import os
 from datetime import timedelta
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,13 +13,17 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
 
-    JWT_COOKIE_SECURE = False
+    JWT_COOKIE_SECURE = True
     JWT_COOKIE_SAMESITE = "Lax"
     JWT_COOKIE_CSRF_PROTECT = True
-
     JWT_REFRESH_COOKIE_PATH = "/api/auth"
+
+
+class DevelopmentConfig(Config):
+    JWT_COOKIE_SECURE = False
 
 
 class TestingConfig(Config):
     TESTING = True
     DATABASE_URL: str | None = os.getenv("TEST_DATABASE_URL")
+    JWT_COOKIE_SECURE = False

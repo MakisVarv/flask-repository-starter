@@ -1,8 +1,5 @@
 import uuid
-from collections.abc import Sequence
-from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth.model import AuthSession
