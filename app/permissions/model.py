@@ -6,12 +6,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.associations import role_permissions
 from app.config.database import Base
+from app.config.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from app.roles.model import Role
 
 
-class Permission(Base):
+class Permission(TimestampMixin, Base):
 
     __tablename__ = "permissions"
 
