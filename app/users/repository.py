@@ -53,6 +53,8 @@ class UserRepository:
         search: str | None = None,
         role: str | None = None,
         is_active: bool | None = None,
+        sort_field: str = "id",
+        descending: bool = False,
     ) -> Sequence[User]:
 
         offset = (page - 1) * page_size
@@ -64,7 +66,28 @@ class UserRepository:
             is_active=is_active,
         )
 
-        statement = statement.order_by(User.id).offset(offset).limit(page_size)
+        sort_columns = {
+            "id": User.id,
+            "first_name": User.first_name,
+            "last_name": User.last_name,
+            "email": User.email,
+            "is_active": User.is_active,
+        }
+
+        if sort_field == "role":
+            statement = statement.join(User.role)
+            sort_column = Role.name
+        else:
+            sort_column = sort_columns[sort_field]
+
+        order = sort_column.desc() if descending else sort_column.asc()
+
+        if sort_field == "id":
+            statement = statement.order_by(order)
+        else:
+            statement = statement.order_by(order, User.id.asc())
+
+        statement = statement.offset(offset).limit(page_size)
         return self.session.scalars(statement).all()
 
     def get_by_id(self, user_id: uuid.UUID) -> User | None:

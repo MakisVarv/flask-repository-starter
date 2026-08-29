@@ -87,8 +87,26 @@ class UserQuerySchema(Schema):
         validate=validate.Range(min=1, max=100),
     )
     search = fields.String(load_default=None)
+    sort = fields.String(load_default="id")
     role = fields.String(load_default=None)
     is_active = fields.Boolean(load_default=None)
+
+    @validates_schema
+    def validate_sort(self, data, **kwargs):
+        sort = data["sort"]
+        field_name = sort.removeprefix("-")
+
+        allowed_fields = {
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "role",
+            "is_active",
+        }
+
+        if field_name not in allowed_fields:
+            raise ValidationError({"sort": [f"Invalid sort field: {field_name}"]})
 
 
 user_query_schema = UserQuerySchema()

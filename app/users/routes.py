@@ -30,12 +30,14 @@ def get_users():
     search = query["search"]
     role = query["role"]
     is_active = query["is_active"]
+    sort = query["sort"]
     with SessionLocal() as session:
         service = UserService(session)
         users, pagination = service.get_users(
             page=page,
             page_size=page_size,
             search=search,
+            sort=sort,
             role=role,
             is_active=is_active,
         )

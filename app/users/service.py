@@ -67,15 +67,20 @@ class UserService:
         page: int = 1,
         page_size: int = 10,
         search: str | None = None,
+        sort: str = "id",
         role: str | None = None,
         is_active: bool | None = None,
     ) -> tuple[Sequence[User], dict[str, int]]:
+        descending = sort.startswith("-")
+        sort_field = sort.removeprefix("-")
         users = self.repository.get_all(
             page=page,
             page_size=page_size,
             search=search,
             role=role,
             is_active=is_active,
+            sort_field=sort_field,
+            descending=descending,
         )
 
         total = self.repository.count(
