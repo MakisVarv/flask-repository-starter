@@ -264,3 +264,161 @@ def test_users_reject_invalid_page_size(client, admin_user):
     assert response.status_code == 400
     assert "errors" in data
     assert "page_size" in data["errors"]
+
+
+def test_users_sort_email_ascending(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?sort=email",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    emails = [user["email"] for user in data["items"]]
+
+    assert emails == sorted(emails)
+
+
+def test_users_sort_email_descending(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?sort=-email",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    emails = [user["email"] for user in data["items"]]
+
+    assert emails == sorted(emails, reverse=True)
+
+
+def test_users_sort_first_name(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?sort=first_name",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    first_names = [user["first_name"] for user in data["items"]]
+
+    assert first_names == sorted(first_names)
+
+
+def test_users_sort_last_name_descending(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?sort=-last_name",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    last_names = [user["last_name"] for user in data["items"]]
+
+    assert last_names == sorted(last_names, reverse=True)
+
+
+def test_users_sort_role_ascending(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?sort=role",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    roles = [user["role"]["name"] for user in data["items"]]
+
+    assert roles == sorted(roles)
+
+
+def test_users_sort_role_descending(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?sort=-role",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    roles = [user["role"]["name"] for user in data["items"]]
+
+    assert roles == sorted(roles, reverse=True)
+
+
+def test_users_sort_is_active(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(regular_user["id"])
+
+        assert user is not None
+
+        user.is_active = False
+        session.commit()
+
+    response = client.get(
+        "/api/users/?sort=is_active",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+
+    statuses = [user["is_active"] for user in data["items"]]
+
+    assert statuses == sorted(statuses)
+
+
+def test_users_reject_invalid_sort_field(client, admin_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?sort=password_hash",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 400
+    assert "errors" in data
+    assert "sort" in data["errors"]
+
+
+def test_users_reject_invalid_descending_sort_field(client, admin_user):
+    access_token = get_admin_token(client, admin_user)
+
+    response = client.get(
+        "/api/users/?sort=-password_hash",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 400
+    assert "errors" in data
+    assert "sort" in data["errors"]
