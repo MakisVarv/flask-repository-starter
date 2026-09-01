@@ -422,3 +422,162 @@ def test_users_reject_invalid_descending_sort_field(client, admin_user):
     assert response.status_code == 400
     assert "errors" in data
     assert "sort" in data["errors"]
+
+
+def test_admin_can_deactivate_user(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+    user_id = regular_user["id"]
+
+    response = client.patch(
+        f"/api/users/{user_id}/status",
+        json={"is_active": False},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert data["id"] == str(user_id)
+    assert data["is_active"] is False
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(user_id)
+
+        assert user is not None
+        assert user.is_active is False
+
+
+def test_admin_can_activate_user(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+    user_id = regular_user["id"]
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(user_id)
+
+        assert user is not None
+
+        user.is_active = False
+        session.commit()
+
+    response = client.patch(
+        f"/api/users/{user_id}/status",
+        json={"is_active": True},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert data["id"] == str(user_id)
+    assert data["is_active"] is True
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(user_id)
+
+        assert user is not None
+        assert user.is_active is True
+
+
+def test_regular_user_cannot_change_user_status(client, regular_user):
+    credentials = {
+        "email": regular_user["email"],
+        "password": regular_user["password"],
+    }
+
+    login_response = client.post(
+        "/api/auth/login",
+        json=credentials,
+    )
+
+    assert login_response.status_code == 200
+
+    access_token = login_response.get_json()["access_token"]
+    user_id = regular_user["id"]
+
+    response = client.patch(
+        f"/api/users/{user_id}/status",
+        json={"is_active": False},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 403
+    assert data["message"] == "You do not have permission to perform this action."
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(user_id)
+
+        assert user is not None
+        assert user.is_active is True
+
+
+def test_change_status_unknown_user(client, admin_user):
+    access_token = get_admin_token(client, admin_user)
+    user_id = "00000000-0000-0000-0000-000000000001"
+
+    response = client.patch(
+        f"/api/users/{user_id}/status",
+        json={"is_active": False},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 404
+    assert data["message"] == "User not found."
+
+
+def test_cannot_delete_active_user(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+    user_id = regular_user["id"]
+
+    response = client.delete(
+        f"/api/users/{user_id}",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 409
+    assert (
+        data["message"]
+        == "Active users must be deactivated before they can be deleted."
+    )
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(user_id)
+
+        assert user is not None
+
+
+def test_can_delete_inactive_user(client, admin_user, regular_user):
+    access_token = get_admin_token(client, admin_user)
+    user_id = regular_user["id"]
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(user_id)
+
+        assert user is not None
+
+        user.is_active = False
+        session.commit()
+
+    response = client.delete(
+        f"/api/users/{user_id}",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 204
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(user_id)
+
+        assert user is None

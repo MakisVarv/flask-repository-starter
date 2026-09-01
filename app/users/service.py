@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash
 
 from app.common.exceptions.bad_request import BadRequestException
+from app.common.exceptions.conflict import ConflictException
 from app.common.exceptions.not_found import NotFoundException
 from app.roles.model import Role
 from app.roles.repository import RoleRepository
@@ -127,7 +128,10 @@ class UserService:
 
     def delete_user(self, user_id: uuid.UUID) -> None:
         user = self.get_user(user_id)
-
+        if user.is_active:
+            raise ConflictException(
+                "Active users must be deactivated before they can be deleted."
+            )
         try:
             self.repository.delete(user)
             self.session.commit()
@@ -145,6 +149,17 @@ class UserService:
 
         try:
             user = self.repository.change_role(user, role)
+            self.session.commit()
+            return user
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def change_status(self, user_id: uuid.UUID, is_active: bool) -> User:
+        user = self.get_user(user_id)
+
+        try:
+            user = self.repository.update_status(user, is_active)
             self.session.commit()
             return user
         except Exception:

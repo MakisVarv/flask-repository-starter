@@ -10,6 +10,7 @@ from app.users.schema import (
     update_user_schema,
     user_query_schema,
     user_schema,
+    user_status_schema,
     users_schema,
 )
 from app.users.service import UserService
@@ -106,6 +107,26 @@ def update_user(user_id):
         return response, 200
 
 
+@user_bp.patch("/<uuid:user_id>/status")
+@permission_required("user.update")
+def change_user_status(user_id):
+    data = cast(
+        dict[str, Any],
+        user_status_schema.load(request.get_json()),
+    )
+    with SessionLocal() as session:
+        service = UserService(session)
+        user = service.change_status(
+            user_id,
+            data["is_active"],
+        )
+        response = cast(
+            dict[str, Any],
+            user_schema.dump(user),
+        )
+    return response, 200
+
+
 @user_bp.delete("/<uuid:user_id>")
 @permission_required("user.delete")
 def delete_user(user_id):
@@ -117,7 +138,7 @@ def delete_user(user_id):
 
         return (
             {"message": "User deleted successfully."},
-            200,
+            204,
         )
 
 

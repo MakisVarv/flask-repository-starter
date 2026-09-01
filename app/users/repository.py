@@ -127,6 +127,11 @@ class UserRepository:
 
         return user
 
+    def update_status(self, user: User, is_active: bool) -> User:
+        user.is_active = is_active
+        self.session.flush()
+        return user
+
     def delete(self, user: User) -> None:
         self.session.delete(user)
         self.session.flush()

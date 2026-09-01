@@ -76,6 +76,13 @@ assign_role_schema = AssignRoleSchema()
 update_user_schema = UpdateUserSchema()
 
 
+class UserStatusSchema(Schema):
+    is_active = fields.Boolean(required=True)
+
+
+user_status_schema = UserStatusSchema()
+
+
 class UserQuerySchema(Schema):
     page = fields.Integer(
         load_default=1,
