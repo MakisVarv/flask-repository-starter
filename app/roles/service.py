@@ -80,7 +80,12 @@ class RoleService:
 
     def delete_role(self, role_id: uuid.UUID) -> None:
         role = self.get_role(role_id)
+        user_count = self.repository.count_users_by_role(role_id)
 
+        if user_count > 0:
+            raise ConflictException(
+                "Role cannot be deleted while users are assigned to it."
+            )
         try:
             self.repository.delete(role)
             self.session.commit()
