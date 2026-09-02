@@ -108,6 +108,14 @@ class UserRepository:
         )
         return self.session.scalar(statement) or 0
 
+    def count_by_role(self, role_id: uuid.UUID) -> int:
+        return (
+            self.session.scalar(
+                select(func.count(User.id)).where(User.role_id == role_id)
+            )
+            or 0
+        )
+
     def create(self, user: User) -> User:
         self.session.add(user)
         self.session.flush()

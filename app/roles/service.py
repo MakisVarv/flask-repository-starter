@@ -10,11 +10,13 @@ from app.permissions.model import Permission
 from app.permissions.repository import PermissionRepository
 from app.roles.model import Role
 from app.roles.repository import RoleRepository
+from app.users.repository import UserRepository
 
 
 class RoleService:
     def __init__(self, session: Session):
         self.session = session
+        self.user_repository = UserRepository(session)
         self.repository = RoleRepository(session)
         self.permission_repository = PermissionRepository(session)
 
@@ -80,7 +82,7 @@ class RoleService:
 
     def delete_role(self, role_id: uuid.UUID) -> None:
         role = self.get_role(role_id)
-        user_count = self.repository.count_users_by_role(role_id)
+        user_count = self.user_repository.count_by_role(role_id)
 
         if user_count > 0:
             raise ConflictException(

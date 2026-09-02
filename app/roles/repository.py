@@ -2,11 +2,10 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.roles.model import Role
-from app.users.model import User
 
 
 class RoleRepository:
@@ -30,14 +29,6 @@ class RoleRepository:
 
     def get_by_id(self, role_id: uuid.UUID) -> Role | None:
         return self.session.get(Role, role_id)
-
-    def count_users_by_role(self, role_id: uuid.UUID) -> int:
-        return (
-            self.session.scalar(
-                select(func.count(User.id)).where(User.role_id == role_id)
-            )
-            or 0
-        )
 
     def create(self, role: Role) -> Role:
         self.session.add(role)
