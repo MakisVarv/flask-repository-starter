@@ -1,7 +1,7 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String
+from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.associations import role_permissions
@@ -32,6 +32,7 @@ class Role(TimestampMixin, Base):
         String(255),
         nullable=True,
     )
+    level: Mapped[int] = mapped_column(Integer, nullable=False)
 
     permissions: Mapped[list["Permission"]] = relationship(
         "Permission",

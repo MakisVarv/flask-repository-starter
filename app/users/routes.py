@@ -1,6 +1,8 @@
+import uuid
 from typing import Any, cast
 
 from flask import Blueprint, request
+from flask_jwt_extended import get_jwt_identity
 
 from app.auth.authorization import permission_required
 from app.config.database import SessionLocal
@@ -74,10 +76,12 @@ def create_user():
         create_user_schema.load(request.get_json()),
     )
 
+    actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = UserService(session)
+        actor = service.get_user(uuid.UUID(actor_id))
 
-        user = service.create_user(**data)
+        user = service.create_user(actor=actor, **data)
 
         response = cast(
             dict[str, Any],
@@ -94,10 +98,12 @@ def update_user(user_id):
         dict[str, Any],
         update_user_schema.load(request.get_json()),
     )
+    actor_id = get_jwt_identity()
 
     with SessionLocal() as session:
         service = UserService(session)
-        user = service.update_user(user_id, data)
+        actor = service.get_user(uuid.UUID(actor_id))
+        user = service.update_user(actor, user_id, data)
 
         response = cast(
             dict[str, Any],
@@ -114,9 +120,12 @@ def change_user_status(user_id):
         dict[str, Any],
         user_status_schema.load(request.get_json()),
     )
+    actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = UserService(session)
+        actor = service.get_user(uuid.UUID(actor_id))
         user = service.change_status(
+            actor,
             user_id,
             data["is_active"],
         )
@@ -131,10 +140,12 @@ def change_user_status(user_id):
 @permission_required("user.delete")
 def delete_user(user_id):
 
+    actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = UserService(session)
 
-        service.delete_user(user_id)
+        actor = service.get_user(uuid.UUID(actor_id))
+        service.delete_user(actor, user_id)
 
         return (
             {"message": "User deleted successfully."},
@@ -149,11 +160,13 @@ def change_role(user_id):
         dict[str, Any],
         assign_role_schema.load(request.get_json()),
     )
+    actor_id = get_jwt_identity()
 
     with SessionLocal() as session:
         service = UserService(session)
 
-        user = service.change_role(user_id, data["role_id"])
+        actor = service.get_user(uuid.UUID(actor_id))
+        user = service.change_role(actor, user_id, data["role_id"])
 
         response = cast(
             dict[str, Any],

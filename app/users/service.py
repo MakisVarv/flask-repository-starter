@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash
 
+from app.auth.authorization import ForbiddenException
 from app.common.exceptions.bad_request import BadRequestException
 from app.common.exceptions.conflict import ConflictException
 from app.common.exceptions.not_found import NotFoundException
@@ -19,6 +20,14 @@ class UserService:
         self.repository = UserRepository(session)
         self.role_repository = RoleRepository(session)
 
+    def _ensure_can_manage_user(self, actor: User, target: User) -> None:
+        if actor.role.level <= target.role.level:
+            raise ForbiddenException("You are not authorized to change this user")
+
+    def _ensure_can_assign_role(self, actor: User, role: Role) -> None:
+        if actor.role.level <= role.level:
+            raise ForbiddenException("You are not authorized to assign this role")
+
     def get_role(self, role_id: uuid.UUID) -> Role:
         role = self.role_repository.get_by_id(role_id)
 
@@ -29,6 +38,7 @@ class UserService:
 
     def create_user(
         self,
+        actor: User,
         first_name: str,
         last_name: str,
         email: str,
@@ -37,10 +47,10 @@ class UserService:
         phone: str | None = None,
     ) -> User:
 
+        role = self.get_role(role_id)
+        self._ensure_can_assign_role(actor, role)
         if self.repository.get_by_email(email):
             raise BadRequestException("Email already exists.")
-
-        self.get_role(role_id)
 
         password_hash = generate_password_hash(password)
 
@@ -108,10 +118,11 @@ class UserService:
 
         return user
 
-    def update_user(self, user_id: uuid.UUID, data: dict) -> User:
+    def update_user(self, actor: User, user_id: uuid.UUID, data: dict) -> User:
 
         user = self.get_user(user_id)
 
+        self._ensure_can_manage_user(actor, user)
         if "email" in data:
             existing = self.repository.get_by_email(data["email"])
 
@@ -126,8 +137,9 @@ class UserService:
             self.session.rollback()
             raise
 
-    def delete_user(self, user_id: uuid.UUID) -> None:
+    def delete_user(self, actor: User, user_id: uuid.UUID) -> None:
         user = self.get_user(user_id)
+        self._ensure_can_manage_user(actor, user)
         if user.is_active:
             raise ConflictException(
                 "Active users must be deactivated before they can be deleted."
@@ -139,7 +151,7 @@ class UserService:
             self.session.rollback()
             raise
 
-    def change_role(self, user_id: uuid.UUID, role_id: uuid.UUID) -> User:
+    def change_role(self, actor: User, user_id: uuid.UUID, role_id: uuid.UUID) -> User:
         user = self.get_user(user_id)
 
         role = self.role_repository.get_by_id(role_id)
@@ -147,6 +159,8 @@ class UserService:
         if role is None:
             raise NotFoundException("Role")
 
+        self._ensure_can_manage_user(actor, user)
+        self._ensure_can_assign_role(actor, role)
         try:
             user = self.repository.change_role(user, role)
             self.session.commit()
@@ -155,8 +169,10 @@ class UserService:
             self.session.rollback()
             raise
 
-    def change_status(self, user_id: uuid.UUID, is_active: bool) -> User:
+    def change_status(self, actor: User, user_id: uuid.UUID, is_active: bool) -> User:
         user = self.get_user(user_id)
+
+        self._ensure_can_manage_user(actor, user)
 
         try:
             user = self.repository.update_status(user, is_active)
