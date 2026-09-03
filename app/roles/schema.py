@@ -12,6 +12,8 @@ class RoleSchema(Schema):
 
     description = fields.String(allow_none=True)
 
+    level = fields.Integer()
+
     permissions = fields.Nested(
         PermissionSchema,
         many=True,
@@ -31,6 +33,8 @@ class CreateRoleSchema(Schema):
         validate=validate.Length(min=1, max=255),
     )
 
+    level = fields.Integer(required=True, validate=validate.Range(min=1, max=100))
+
 
 class UpdateRoleSchema(Schema):
     name = fields.String(
@@ -43,10 +47,11 @@ class UpdateRoleSchema(Schema):
         allow_none=True,
         validate=validate.Length(min=1, max=255),
     )
+    level = fields.Integer(required=False, validate=validate.Range(min=1, max=100))
 
     @validates_schema
     def validate_not_empty(self, data, **kwargs):
-        if "name" not in data and "description" not in data:
+        if "name" not in data and "description" not in data and "level" not in data:
             raise ValidationError("At least one field must be provided.")
 
 

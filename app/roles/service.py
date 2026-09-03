@@ -31,16 +31,14 @@ class RoleService:
     def create_role(
         self,
         name: str,
+        level: int,
         description: str | None = None,
     ) -> Role:
 
         if self.repository.exists(name):
             raise ConflictException("Role already exists.")
 
-        role = Role(
-            name=name,
-            description=description,
-        )
+        role = Role(name=name, description=description, level=level)
 
         try:
 
