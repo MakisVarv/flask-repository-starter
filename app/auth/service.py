@@ -39,7 +39,7 @@ class AuthService:
         if user_role is None:
             raise NotFoundException("User role")
 
-        return self.user_service.create_user(
+        return self.user_service._create_user(
             first_name=first_name,
             last_name=last_name,
             email=email,

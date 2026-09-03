@@ -36,9 +36,8 @@ class UserService:
 
         return role
 
-    def create_user(
+    def _create_user(
         self,
-        actor: User,
         first_name: str,
         last_name: str,
         email: str,
@@ -46,9 +45,6 @@ class UserService:
         role_id: uuid.UUID,
         phone: str | None = None,
     ) -> User:
-
-        role = self.get_role(role_id)
-        self._ensure_can_assign_role(actor, role)
         if self.repository.get_by_email(email):
             raise BadRequestException("Email already exists.")
 
@@ -72,6 +68,29 @@ class UserService:
 
             self.session.rollback()
             raise
+
+    def create_user(
+        self,
+        actor: User,
+        first_name: str,
+        last_name: str,
+        email: str,
+        password: str,
+        role_id: uuid.UUID,
+        phone: str | None = None,
+    ) -> User:
+
+        role = self.get_role(role_id)
+        self._ensure_can_assign_role(actor, role)
+
+        return self._create_user(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password=password,
+            role_id=role_id,
+            phone=phone,
+        )
 
     def get_users(
         self,

@@ -2,11 +2,12 @@ import os
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from werkzeug.security import generate_password_hash
 
 from app.permissions.model import Permission
 from app.roles.model import Role
+from app.users.model import User
 from app.users.repository import UserRepository
-from app.users.service import UserService
 
 PERMISSIONS: list[dict[str, str]] = [
     # Users
@@ -32,15 +33,9 @@ PERMISSIONS: list[dict[str, str]] = [
     # Dashboard
     {"name": "dashboard.read", "description": "View dashboard"},
 ]
-ROLES: list[dict[str, str]] = [
-    {
-        "name": "Admin",
-        "description": "Full system administrator",
-    },
-    {
-        "name": "User",
-        "description": "Standard system user",
-    },
+ROLES: list[dict[str, str | int]] = [
+    {"name": "Admin", "description": "Full system administrator", "level": 100},
+    {"name": "User", "description": "Standard system user", "level": 10},
 ]
 
 ROLE_PERMISSIONS: dict[str, list[str]] = {
@@ -89,7 +84,13 @@ def seed_roles(session: Session) -> None:
 
         print(f"Adding {role['name']}")
 
-        session.add(Role(name=role["name"], description=role["description"]))
+        session.add(
+            Role(
+                name=role["name"],
+                description=role["description"],
+                level=role["level"],
+            )
+        )
 
     session.commit()
 
@@ -158,16 +159,22 @@ def seed_admin(session: Session) -> None:
 
         return
 
-    user_service = UserService(session)
+    password_hash = generate_password_hash(password)
 
-    user_service.create_user(
+    admin = User(
         first_name=first_name,
         last_name=last_name,
         email=email,
-        password=password,
+        password_hash=password_hash,
         role_id=admin_role.id,
     )
 
+    try:
+        user_repository.create(admin)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     print("Admin user created.")
 
 

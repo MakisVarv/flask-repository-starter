@@ -47,6 +47,7 @@ def user_role(db_transaction):
         role = Role(
             name="User",
             description="Standard system user",
+            level=10,
         )
 
         session.add(role)
@@ -63,7 +64,7 @@ def regular_user(user_role):
     with SessionLocal() as session:
         user_service = UserService(session)
 
-        user = user_service.create_user(
+        user = user_service._create_user(
             first_name="John",
             last_name="Doe",
             email=email,
@@ -123,6 +124,7 @@ def admin_role(admin_permissions):
         role = Role(
             name="Admin",
             description="System administrator",
+            level=100,
         )
 
         role.permissions.extend(permissions)
@@ -141,7 +143,7 @@ def admin_user(admin_role):
     with SessionLocal() as session:
         user_service = UserService(session)
 
-        user_service.create_user(
+        user_service._create_user(
             first_name="System",
             last_name="Admin",
             email=email,
