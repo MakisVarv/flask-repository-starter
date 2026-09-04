@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash
 
-from app.auth.authorization import ForbiddenException
+from app.auth.authorization import MAX_ROLE_LEVEL, ForbiddenException
 from app.common.exceptions.bad_request import BadRequestException
 from app.common.exceptions.conflict import ConflictException
 from app.common.exceptions.not_found import NotFoundException
@@ -21,10 +21,15 @@ class UserService:
         self.role_repository = RoleRepository(session)
 
     def _ensure_can_manage_user(self, actor: User, target: User) -> None:
+        if actor.role.level == MAX_ROLE_LEVEL:
+            return
         if actor.role.level <= target.role.level:
             raise ForbiddenException("You are not authorized to change this user")
 
     def _ensure_can_assign_role(self, actor: User, role: Role) -> None:
+        if actor.role.level == MAX_ROLE_LEVEL:
+            return
+
         if actor.role.level <= role.level:
             raise ForbiddenException("You are not authorized to assign this role")
 

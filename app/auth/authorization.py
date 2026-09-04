@@ -6,6 +6,8 @@ from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from app.common.exceptions import ForbiddenException
 from app.config.database import SessionLocal
 
+MAX_ROLE_LEVEL = 100
+
 
 def has_permission(
     user,
