@@ -13,8 +13,9 @@ from werkzeug.security import check_password_hash
 from app.auth.model import AuthSession
 from app.auth.repository import AuthSessionRepository
 from app.common.exceptions import NotFoundException, UnauthorizedException
-from app.users import UserRepository, UserService
 from app.users.model import User
+from app.users.repository import UserRepository
+from app.users.service import UserService
 
 
 class AuthService:

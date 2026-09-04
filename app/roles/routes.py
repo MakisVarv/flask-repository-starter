@@ -14,7 +14,7 @@ from app.roles.schema import (
     update_role_schema,
 )
 from app.roles.service import RoleService
-from app.users import UserService
+from app.users.service import UserService
 
 role_bp = Blueprint(
     "roles",

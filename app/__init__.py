@@ -4,9 +4,9 @@ from app.auth.routes import auth_bp
 from app.common.error_handler import register_error_handlers
 from app.config.config import Config
 from app.config.extensions import register_extensions
-from app.permissions import permission_bp
-from app.roles import role_bp
-from app.users import user_bp
+from app.permissions.routes import permission_bp
+from app.roles.routes import role_bp
+from app.users.routes import user_bp
 
 
 def _validate_config(app: Flask) -> None:
