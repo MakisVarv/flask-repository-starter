@@ -41,6 +41,28 @@ class UserService:
 
         return role
 
+    def register_user(
+        self,
+        first_name: str,
+        last_name: str,
+        email: str,
+        password: str,
+        phone: str | None = None,
+    ) -> User:
+        role = self.role_repository.get_by_name("User")
+
+        if role is None:
+            raise NotFoundException("User role")
+
+        return self._create_user(
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            password=password,
+            role_id=role.id,
+            phone=phone,
+        )
+
     def _create_user(
         self,
         first_name: str,

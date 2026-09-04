@@ -34,18 +34,12 @@ class AuthService:
         password: str,
         phone: str | None = None,
     ) -> User:
-        user_role = self.role_repository.get_by_name("User")
-
-        if user_role is None:
-            raise NotFoundException("User role")
-
-        return self.user_service._create_user(
+        return self.user_service.register_user(
             first_name=first_name,
             last_name=last_name,
             email=email,
             password=password,
             phone=phone,
-            role_id=user_role.id,
         )
 
     def login(

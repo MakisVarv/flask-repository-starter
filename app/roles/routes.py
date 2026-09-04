@@ -1,6 +1,8 @@
+import uuid
 from typing import Any, cast
 
 from flask import Blueprint, request
+from flask_jwt_extended import get_jwt_identity
 
 from app.auth.authorization import permission_required
 from app.config.database import SessionLocal
@@ -12,6 +14,7 @@ from app.roles.schema import (
     update_role_schema,
 )
 from app.roles.service import RoleService
+from app.users import UserService
 
 role_bp = Blueprint(
     "roles",
@@ -57,13 +60,16 @@ def create_role():
         dict[str, Any],
         create_role_schema.load(request.get_json()),
     )
-
+    actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = RoleService(session)
-
+        user_service = UserService(session)
+        actor = user_service.get_user(uuid.UUID(actor_id))
         role = service.create_role(
+            actor,
             name=data["name"],
             description=data.get("description"),
+            level=data["level"],
         )
         response = cast(
             dict[str, Any],
@@ -83,10 +89,13 @@ def update_role(role_id):
         dict[str, Any],
         update_role_schema.load(request.get_json()),
     )
+    actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = RoleService(session)
+        user_service = UserService(session)
+        actor = user_service.get_user(uuid.UUID(actor_id))
 
-        role = service.update_role(role_id, data)
+        role = service.update_role(actor, role_id, data)
         response = cast(
             dict[str, Any],
             role_schema.dump(role),
@@ -98,11 +107,12 @@ def update_role(role_id):
 @role_bp.delete("/<uuid:role_id>")
 @permission_required("role.delete")
 def delete_role(role_id):
-
+    actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = RoleService(session)
-
-        service.delete_role(role_id)
+        user_service = UserService(session)
+        actor = user_service.get_user(uuid.UUID(actor_id))
+        service.delete_role(actor, role_id)
 
         return (
             {"message": "Role deleted successfully."},
@@ -117,10 +127,14 @@ def assign_permission(role_id):
         dict[str, Any],
         add_permission_schema.load(request.get_json()),
     )
+    actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = RoleService(session)
+        user_service = UserService(session)
+        actor = user_service.get_user(uuid.UUID(actor_id))
 
         role = service.assign_permission(
+            actor,
             role_id,
             data["permission_id"],
         )
@@ -134,10 +148,12 @@ def assign_permission(role_id):
 @role_bp.delete("/<uuid:role_id>/permissions/<uuid:permission_id>")
 @permission_required("role.assign_permission")
 def remove_permission(role_id, permission_id):
+    actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = RoleService(session)
-
-        role = service.remove_permission(role_id, permission_id)
+        user_service = UserService(session)
+        actor = user_service.get_user(uuid.UUID(actor_id))
+        role = service.remove_permission(actor, role_id, permission_id)
         response = cast(
             dict[str, Any],
             role_schema.dump(role),
