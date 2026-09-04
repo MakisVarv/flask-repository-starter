@@ -13,7 +13,6 @@ from werkzeug.security import check_password_hash
 from app.auth.model import AuthSession
 from app.auth.repository import AuthSessionRepository
 from app.common.exceptions import NotFoundException, UnauthorizedException
-from app.roles import RoleRepository
 from app.users import UserRepository, UserService
 from app.users.model import User
 
@@ -21,7 +20,6 @@ from app.users.model import User
 class AuthService:
     def __init__(self, session: Session) -> None:
         self.session = session
-        self.role_repository = RoleRepository(session)
         self.user_service = UserService(session)
         self.user_repository = UserRepository(session)
         self.auth_session_repository = AuthSessionRepository(session)
