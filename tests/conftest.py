@@ -97,9 +97,6 @@ def admin_permissions(db_transaction):
             description="Assign or remove permissions from roles",
         ),
         Permission(name="permission.read", description="Read permissions"),
-        Permission(name="permission.create", description="Create permissions"),
-        Permission(name="permission.update", description="Update permissions"),
-        Permission(name="permission.delete", description="Delete permissions"),
     ]
 
     with SessionLocal() as session:

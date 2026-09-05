@@ -5,11 +5,12 @@ Revises: c98960e89ca2
 Create Date: 2026-08-23 17:22:26.380521
 
 """
+
 from typing import Sequence, Union
 
 # revision identifiers, used by Alembic.
-revision: str = '31f3ecb07e02'
-down_revision: Union[str, Sequence[str], None] = 'c98960e89ca2'
+revision: str = "31f3ecb07e02"
+down_revision: Union[str, Sequence[str], None] = "c98960e89ca2"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
