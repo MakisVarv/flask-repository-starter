@@ -2,7 +2,8 @@ from sqlalchemy import func, select
 
 from app.auth.model import AuthSession
 from app.config.database import SessionLocal
-from app.users import User, UserRepository
+from app.users.model import User
+from app.users.repository import UserRepository
 
 
 def test_users_requires_authentication(client):

@@ -1,5 +1,5 @@
 from app.config.database import SessionLocal
-from app.users import UserRepository
+from app.users.repository import UserRepository
 
 
 def get_admin_token(client, admin_user):

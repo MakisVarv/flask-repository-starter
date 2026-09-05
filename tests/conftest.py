@@ -155,3 +155,50 @@ def admin_user(admin_role):
         "email": email,
         "password": password,
     }
+
+
+@pytest.fixture
+def manager_role(admin_permissions):
+    with SessionLocal() as session:
+        role = Role(
+            name="Manager",
+            description="Mid-level manager",
+            level=50,
+        )
+        session.add(role)
+
+        for permission_id in admin_permissions:
+            permission = session.get(Permission, permission_id)
+
+            assert permission is not None
+
+            role.permissions.append(permission)
+
+        session.commit()
+
+        return role.id
+
+
+@pytest.fixture
+def manager_user(manager_role):
+    email = "manager@example.com"
+    password = "Manager123!"
+
+    with SessionLocal() as session:
+        user_service = UserService(session)
+
+        user = user_service._create_user(
+            first_name="Test",
+            last_name="Manager",
+            email=email,
+            password=password,
+            role_id=manager_role,
+        )
+
+        user_id = user.id
+
+    return {
+        "id": user_id,
+        "email": email,
+        "password": password,
+    }
