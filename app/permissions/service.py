@@ -15,6 +15,19 @@ class PermissionService:
         self.session = session
         self.repository = PermissionRepository(session)
 
+    def get_permissions(self) -> Sequence[Permission]:
+
+        return self.repository.get_all()
+
+    def get_permission(self, permission_id: uuid.UUID) -> Permission:
+
+        permission = self.repository.get_by_id(permission_id)
+
+        if permission is None:
+            raise NotFoundException("Permission")
+
+        return permission
+
     def create_permission(
         self,
         name: str,
@@ -35,19 +48,6 @@ class PermissionService:
         except Exception:
             self.session.rollback()
             raise
-
-    def get_permissions(self) -> Sequence[Permission]:
-
-        return self.repository.get_all()
-
-    def get_permission(self, permission_id: uuid.UUID) -> Permission:
-
-        permission = self.repository.get_by_id(permission_id)
-
-        if permission is None:
-            raise NotFoundException("Permission")
-
-        return permission
 
     def update_permission(
         self, permission_id: uuid.UUID, data: dict[str, Any]

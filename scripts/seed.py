@@ -27,9 +27,6 @@ PERMISSIONS: list[dict[str, str]] = [
     },
     # Permissions
     {"name": "permission.read", "description": "Read permissions"},
-    {"name": "permission.create", "description": "Create permissions"},
-    {"name": "permission.update", "description": "Update permissions"},
-    {"name": "permission.delete", "description": "Delete permissions"},
     # Dashboard
     {"name": "dashboard.read", "description": "View dashboard"},
 ]
