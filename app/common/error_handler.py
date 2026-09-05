@@ -29,10 +29,10 @@ def register_error_handlers(app):
 
     @app.errorhandler(ValidationError)
     def handle_validation(error):
-
         return (
             jsonify(
                 {
+                    "message": "Validation failed.",
                     "errors": error.messages,
                 }
             ),

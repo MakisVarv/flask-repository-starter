@@ -4,7 +4,11 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import MAX_ROLE_LEVEL, ForbiddenException
+from app.auth.authorization import (
+    MAX_ROLE_LEVEL,
+    PROTECTED_ROLE_NAMES,
+    ForbiddenException,
+)
 from app.common.exceptions import ConflictException
 from app.common.exceptions.not_found import NotFoundException
 from app.permissions.model import Permission
@@ -106,6 +110,10 @@ class RoleService:
     def delete_role(self, actor: User, role_id: uuid.UUID) -> None:
         role = self.get_role(role_id)
         self._ensure_can_manage_role(actor, role)
+
+        if role.name in PROTECTED_ROLE_NAMES:
+            raise ConflictException("Built-in roles cannot be deleted.")
+
         user_count = self.user_repository.count_by_role(role_id)
 
         if user_count > 0:

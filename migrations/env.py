@@ -3,12 +3,12 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.auth import AuthSession  # noqa: F401
+from app.auth.model import AuthSession  # noqa: F401
 from app.config.config import Config
 from app.config.database import Base
-from app.permissions import Permission  # noqa: F401
-from app.roles import Role, role_permissions  # noqa: F401
-from app.users import User  # noqa: F401
+from app.permissions.model import Permission  # noqa: F401
+from app.roles.model import Role, role_permissions  # noqa: F401
+from app.users.model import User  # noqa: F401
 
 database_url = Config.DATABASE_URL
 

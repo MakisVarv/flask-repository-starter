@@ -43,6 +43,9 @@ class RoleRepository:
         if "description" in data:
             role.description = data["description"]
 
+        if "level" in data:
+            role.level = data["level"]
+
         self.session.flush()
         self.session.refresh(role)
 

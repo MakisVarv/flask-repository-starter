@@ -8,6 +8,8 @@ from app.config.database import SessionLocal
 
 MAX_ROLE_LEVEL = 100
 
+PROTECTED_ROLE_NAMES = {"Admin", "User"}
+
 
 def has_permission(
     user,
