@@ -12,6 +12,7 @@ class Config:
     FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=7)
+    JWT_ERROR_MESSAGE_KEY = "message"
 
     JWT_COOKIE_SECURE = True
     JWT_COOKIE_SAMESITE = "Lax"

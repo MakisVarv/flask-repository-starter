@@ -4,12 +4,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.auth.authorization import (
-    MAX_ROLE_LEVEL,
-    PROTECTED_ROLE_NAMES,
-    ForbiddenException,
-)
-from app.common.exceptions import ConflictException
+from app.auth.authorization import MAX_ROLE_LEVEL, PROTECTED_ROLE_NAMES
+from app.common.exceptions import ConflictException, ForbiddenException
 from app.common.exceptions.not_found import NotFoundException
 from app.permissions.model import Permission
 from app.permissions.repository import PermissionRepository
@@ -93,6 +89,11 @@ class RoleService:
     ) -> Role:
         role = self.get_role(role_id)
         self._ensure_can_manage_role(actor, role)
+        if role.name in PROTECTED_ROLE_NAMES:
+            if "name" in data or "level" in data:
+                raise ConflictException(
+                    "Built-in role name and level cannot be changed."
+                )
         if "level" in data:
             self._ensure_can_set_role_level(actor, data["level"])
         if "name" in data:

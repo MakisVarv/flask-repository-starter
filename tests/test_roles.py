@@ -431,3 +431,47 @@ def test_cannot_delete_builtin_admin_role(client, admin_user, admin_role):
 
         assert role is not None
         assert role.name == "Admin"
+
+
+def test_cannot_rename_builtin_user_role(client, admin_user, user_role):
+    access_token = get_access_token(client, admin_user)
+
+    response = client.patch(
+        f"/api/roles/{user_role}",
+        json={"name": "Member"},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 409
+    assert data["message"] == "Built-in role name and level cannot be changed."
+
+    with SessionLocal() as session:
+        repository = RoleRepository(session)
+        role = repository.get_by_id(user_role)
+
+        assert role is not None
+        assert role.name == "User"
+
+
+def test_cannot_change_builtin_admin_level(client, admin_user, admin_role):
+    access_token = get_access_token(client, admin_user)
+
+    response = client.patch(
+        f"/api/roles/{admin_role}",
+        json={"level": 90},
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    data = response.get_json()
+
+    assert response.status_code == 409
+    assert data["message"] == "Built-in role name and level cannot be changed."
+
+    with SessionLocal() as session:
+        repository = RoleRepository(session)
+        role = repository.get_by_id(admin_role)
+
+        assert role is not None
+        assert role.level == 100

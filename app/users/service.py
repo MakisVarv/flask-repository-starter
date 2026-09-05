@@ -4,7 +4,8 @@ from collections.abc import Sequence
 from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash
 
-from app.auth.authorization import MAX_ROLE_LEVEL, ForbiddenException
+from app.auth.authorization import MAX_ROLE_LEVEL
+from app.common.exceptions import ForbiddenException
 from app.common.exceptions.bad_request import BadRequestException
 from app.common.exceptions.conflict import ConflictException
 from app.common.exceptions.not_found import NotFoundException

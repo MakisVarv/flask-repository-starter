@@ -8,8 +8,9 @@ from app.users.repository import UserRepository
 
 def test_users_requires_authentication(client):
     response = client.get("/api/users/")
-
+    data = response.get_json()
     assert response.status_code == 401
+    assert "message" in data
 
 
 def test_register_user(client, user_role):
