@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import Sequence
 from typing import Generic, TypeVar
 
@@ -14,7 +15,7 @@ class BaseRepository(Generic[ModelType]):
         self.session = session
         self.model = model
 
-    def get_by_id(self, entity_id) -> ModelType | None:
+    def get_by_id(self, entity_id: uuid.UUID) -> ModelType | None:
         return self.session.get(self.model, entity_id)
 
     def get_all(self) -> Sequence[ModelType]:
