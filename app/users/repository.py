@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.common.base_repository import BaseRepository
 from app.common.pagination import Pagination
+from app.common.query_options import QueryOptions
 from app.roles.model import Role
 from app.users.model import User
 
@@ -51,13 +52,10 @@ class UserRepository(BaseRepository[User]):
 
     def get_page(
         self,
-        page: int = 1,
-        page_size: int = 10,
+        options: QueryOptions,
         search: str | None = None,
         role: str | None = None,
         is_active: bool | None = None,
-        sort_field: str = "id",
-        descending: bool = False,
     ) -> tuple[Sequence[User], dict[str, int | bool]]:
 
         statement = select(User)
@@ -83,15 +81,15 @@ class UserRepository(BaseRepository[User]):
             "is_active": User.is_active,
         }
 
-        if sort_field == "role":
+        if options.sort_field == "role":
             statement = statement.join(User.role)
             sort_column = Role.name
         else:
-            sort_column = sort_columns[sort_field]
+            sort_column = sort_columns[options.sort_field]
 
-        order = sort_column.desc() if descending else sort_column.asc()
+        order = sort_column.desc() if options.descending else sort_column.asc()
 
-        if sort_field == "id":
+        if options.sort_field == "id":
             statement = statement.order_by(order)
         else:
             statement = statement.order_by(order, User.id.asc())
@@ -100,8 +98,8 @@ class UserRepository(BaseRepository[User]):
             session=self.session,
             statement=statement,
             count_statement=count_statement,
-            page=page,
-            page_size=page_size,
+            page=options.page,
+            page_size=options.page_size,
         )
 
     def count_by_role(self, role_id: uuid.UUID) -> int:

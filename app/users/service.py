@@ -10,6 +10,7 @@ from app.common.exceptions import ForbiddenException
 from app.common.exceptions.bad_request import BadRequestException
 from app.common.exceptions.conflict import ConflictException
 from app.common.exceptions.not_found import NotFoundException
+from app.common.query_options import QueryOptions
 from app.roles.model import Role
 from app.roles.repository import RoleRepository
 from app.users.model import User
@@ -133,15 +134,15 @@ class UserService(BaseService[User]):
     ) -> tuple[Sequence[User], dict[str, int | bool]]:
         descending = sort.startswith("-")
         sort_field = sort.removeprefix("-")
+        options = QueryOptions(
+            page=page, page_size=page_size, sort_field=sort_field, descending=descending
+        )
 
         return self.repository.get_page(
-            page=page,
-            page_size=page_size,
+            options=options,
             search=search,
             role=role,
             is_active=is_active,
-            sort_field=sort_field,
-            descending=descending,
         )
 
     def update_user(self, actor: User, user_id: uuid.UUID, data: dict) -> User:
