@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash
 
 from app.auth.authorization import MAX_ROLE_LEVEL
+from app.common.base_service import BaseService
 from app.common.exceptions import ForbiddenException
 from app.common.exceptions.bad_request import BadRequestException
 from app.common.exceptions.conflict import ConflictException
@@ -15,10 +16,11 @@ from app.users.model import User
 from app.users.repository import UserRepository
 
 
-class UserService:
+class UserService(BaseService[User]):
     def __init__(self, session: Session):
         self.session = session
         self.repository = UserRepository(session)
+        super().__init__(repository=self.repository, resource_name="User")
         self.role_repository = RoleRepository(session)
 
     def _ensure_can_manage_user(self, actor: User, target: User) -> None:
@@ -156,18 +158,9 @@ class UserService:
             "total_pages": total_pages,
         }
 
-    def get_user(self, user_id: uuid.UUID) -> User:
-
-        user = self.repository.get_by_id(user_id)
-
-        if user is None:
-            raise NotFoundException("User")
-
-        return user
-
     def update_user(self, actor: User, user_id: uuid.UUID, data: dict) -> User:
 
-        user = self.get_user(user_id)
+        user = self.get_by_id(user_id)
 
         self._ensure_can_manage_user(actor, user)
         if "email" in data:
@@ -185,7 +178,7 @@ class UserService:
             raise
 
     def delete_user(self, actor: User, user_id: uuid.UUID) -> None:
-        user = self.get_user(user_id)
+        user = self.get_by_id(user_id)
         self._ensure_can_manage_user(actor, user)
         if user.is_active:
             raise ConflictException(
@@ -199,7 +192,7 @@ class UserService:
             raise
 
     def change_role(self, actor: User, user_id: uuid.UUID, role_id: uuid.UUID) -> User:
-        user = self.get_user(user_id)
+        user = self.get_by_id(user_id)
 
         role = self.role_repository.get_by_id(role_id)
 
@@ -217,7 +210,7 @@ class UserService:
             raise
 
     def change_status(self, actor: User, user_id: uuid.UUID, is_active: bool) -> User:
-        user = self.get_user(user_id)
+        user = self.get_by_id(user_id)
 
         self._ensure_can_manage_user(actor, user)
 

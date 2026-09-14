@@ -5,6 +5,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.auth.authorization import MAX_ROLE_LEVEL, PROTECTED_ROLE_NAMES
+from app.common.base_service import BaseService
 from app.common.exceptions import ConflictException, ForbiddenException
 from app.common.exceptions.not_found import NotFoundException
 from app.permissions.model import Permission
@@ -15,7 +16,18 @@ from app.users.model import User
 from app.users.repository import UserRepository
 
 
-class RoleService:
+class RoleService(BaseService[Role]):
+    def __init__(self, session: Session) -> None:
+        self.repository = RoleRepository(session)
+
+        super().__init__(
+            repository=self.repository,
+            resource_name="Role",
+        )
+        self.permission_repository = PermissionRepository(session)
+        self.user_repository = UserRepository(session)
+
+        self.session = session
 
     def _ensure_can_manage_role(self, actor: User, role: Role) -> None:
         if actor.role.level == MAX_ROLE_LEVEL:
@@ -30,12 +42,6 @@ class RoleService:
 
         if actor.role.level <= level:
             raise ForbiddenException("You are not authorized to use this role level")
-
-    def __init__(self, session: Session):
-        self.session = session
-        self.user_repository = UserRepository(session)
-        self.repository = RoleRepository(session)
-        self.permission_repository = PermissionRepository(session)
 
     def get_permission(self, permission_id: uuid.UUID) -> Permission:
         permission = self.permission_repository.get_by_id(permission_id)
@@ -75,19 +81,10 @@ class RoleService:
 
         return self.repository.get_all()
 
-    def get_role(self, role_id: uuid.UUID) -> Role:
-
-        role = self.repository.get_by_id(role_id)
-
-        if role is None:
-            raise NotFoundException("Role")
-
-        return role
-
     def update_role(
         self, actor: User, role_id: uuid.UUID, data: dict[str, Any]
     ) -> Role:
-        role = self.get_role(role_id)
+        role = self.get_by_id(role_id)
         self._ensure_can_manage_role(actor, role)
         if role.name in PROTECTED_ROLE_NAMES:
             if "name" in data or "level" in data:
@@ -109,7 +106,7 @@ class RoleService:
             raise
 
     def delete_role(self, actor: User, role_id: uuid.UUID) -> None:
-        role = self.get_role(role_id)
+        role = self.get_by_id(role_id)
         self._ensure_can_manage_role(actor, role)
 
         if role.name in PROTECTED_ROLE_NAMES:
@@ -134,7 +131,7 @@ class RoleService:
         role_id: uuid.UUID,
         permission_id: uuid.UUID,
     ) -> Role:
-        role = self.get_role(role_id)
+        role = self.get_by_id(role_id)
         self._ensure_can_manage_role(actor, role)
         permission = self.get_permission(permission_id)
 
@@ -156,7 +153,7 @@ class RoleService:
         role_id: uuid.UUID,
         permission_id: uuid.UUID,
     ) -> Role:
-        role = self.get_role(role_id)
+        role = self.get_by_id(role_id)
         self._ensure_can_manage_role(actor, role)
         permission = self.get_permission(permission_id)
 

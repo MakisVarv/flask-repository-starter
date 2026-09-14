@@ -4,29 +4,26 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.common.base_service import BaseService
 from app.common.exceptions import ConflictException
-from app.common.exceptions.not_found import NotFoundException
 from app.permissions.model import Permission
 from app.permissions.repository import PermissionRepository
 
 
-class PermissionService:
+class PermissionService(BaseService[Permission]):
     def __init__(self, session: Session) -> None:
-        self.session = session
         self.repository = PermissionRepository(session)
+
+        super().__init__(
+            repository=self.repository,
+            resource_name="Permission",
+        )
+
+        self.session = session
 
     def get_permissions(self) -> Sequence[Permission]:
 
         return self.repository.get_all()
-
-    def get_permission(self, permission_id: uuid.UUID) -> Permission:
-
-        permission = self.repository.get_by_id(permission_id)
-
-        if permission is None:
-            raise NotFoundException("Permission")
-
-        return permission
 
     def create_permission(
         self,
@@ -52,7 +49,7 @@ class PermissionService:
     def update_permission(
         self, permission_id: uuid.UUID, data: dict[str, Any]
     ) -> Permission:
-        permission = self.get_permission(permission_id)
+        permission = self.get_by_id(permission_id)
         if "name" in data:
             existing = self.repository.get_by_name(data["name"])
             if existing and existing.id != permission.id:
@@ -66,7 +63,7 @@ class PermissionService:
             raise
 
     def delete_permission(self, permission_id: uuid.UUID) -> None:
-        permission = self.get_permission(permission_id)
+        permission = self.get_by_id(permission_id)
 
         try:
             self.repository.delete(permission)

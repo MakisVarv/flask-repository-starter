@@ -43,7 +43,7 @@ def get_role(role_id):
     with SessionLocal() as session:
         service = RoleService(session)
 
-        role = service.get_role(role_id)
+        role = service.get_by_id(role_id)
         response = cast(
             dict[str, Any],
             role_schema.dump(role),
