@@ -79,23 +79,18 @@ class UserRepository(BaseRepository[User]):
             "first_name": User.first_name,
             "last_name": User.last_name,
             "email": User.email,
+            "role": Role.name,
             "is_active": User.is_active,
         }
         if options.sort_field == "role":
             statement = statement.join(User.role)
-
-            order = Role.name.desc() if options.descending else Role.name.asc()
-
-            statement = statement.order_by(order, User.id.asc())
-
-        else:
-            statement = apply_sorting(
-                statement=statement,
-                sort_columns=sort_columns,
-                sort_field=options.sort_field,
-                descending=options.descending,
-                secondary_column=User.id,
-            )
+        statement = apply_sorting(
+            statement=statement,
+            sort_columns=sort_columns,
+            sort_field=options.sort_field,
+            descending=options.descending,
+            secondary_column=User.id,
+        )
 
         return Pagination.paginate(
             session=self.session,
