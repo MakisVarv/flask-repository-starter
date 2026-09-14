@@ -6,9 +6,9 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.common.base_repository import BaseRepository
-from app.common.pagination import Pagination
-from app.common.query_options import QueryOptions
-from app.common.sorting import apply_sorting
+from app.common.query.pagination import Pagination
+from app.common.query.query_options import QueryOptions
+from app.common.query.sorting import apply_sorting
 from app.roles.model import Role
 from app.users.model import User
 
