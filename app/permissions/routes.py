@@ -37,7 +37,7 @@ def get_permission(permission_id):
     with SessionLocal() as session:
         service = PermissionService(session)
 
-        permission = service.get_permission(permission_id)
+        permission = service.get_by_id(permission_id)
         response = cast(
             dict[str, Any],
             permission_schema.dump(permission),

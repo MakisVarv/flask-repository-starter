@@ -58,7 +58,7 @@ def get_user(user_id):
     with SessionLocal() as session:
         service = UserService(session)
 
-        user = service.get_user(user_id)
+        user = service.get_by_id(user_id)
 
         response = cast(
             dict[str, Any],
@@ -79,7 +79,7 @@ def create_user():
     actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = UserService(session)
-        actor = service.get_user(uuid.UUID(actor_id))
+        actor = service.get_by_id(uuid.UUID(actor_id))
 
         user = service.create_user(actor=actor, **data)
 
@@ -102,7 +102,7 @@ def update_user(user_id):
 
     with SessionLocal() as session:
         service = UserService(session)
-        actor = service.get_user(uuid.UUID(actor_id))
+        actor = service.get_by_id(uuid.UUID(actor_id))
         user = service.update_user(actor, user_id, data)
 
         response = cast(
@@ -123,7 +123,7 @@ def change_user_status(user_id):
     actor_id = get_jwt_identity()
     with SessionLocal() as session:
         service = UserService(session)
-        actor = service.get_user(uuid.UUID(actor_id))
+        actor = service.get_by_id(uuid.UUID(actor_id))
         user = service.change_status(
             actor,
             user_id,
@@ -144,7 +144,7 @@ def delete_user(user_id):
     with SessionLocal() as session:
         service = UserService(session)
 
-        actor = service.get_user(uuid.UUID(actor_id))
+        actor = service.get_by_id(uuid.UUID(actor_id))
         service.delete_user(actor, user_id)
 
         return (
@@ -165,7 +165,7 @@ def change_role(user_id):
     with SessionLocal() as session:
         service = UserService(session)
 
-        actor = service.get_user(uuid.UUID(actor_id))
+        actor = service.get_by_id(uuid.UUID(actor_id))
         user = service.change_role(actor, user_id, data["role_id"])
 
         response = cast(

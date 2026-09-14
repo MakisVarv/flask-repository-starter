@@ -64,7 +64,7 @@ def create_role():
     with SessionLocal() as session:
         service = RoleService(session)
         user_service = UserService(session)
-        actor = user_service.get_user(uuid.UUID(actor_id))
+        actor = user_service.get_by_id(uuid.UUID(actor_id))
         role = service.create_role(
             actor,
             name=data["name"],
@@ -93,7 +93,7 @@ def update_role(role_id):
     with SessionLocal() as session:
         service = RoleService(session)
         user_service = UserService(session)
-        actor = user_service.get_user(uuid.UUID(actor_id))
+        actor = user_service.get_by_id(uuid.UUID(actor_id))
 
         role = service.update_role(actor, role_id, data)
         response = cast(
@@ -111,7 +111,7 @@ def delete_role(role_id):
     with SessionLocal() as session:
         service = RoleService(session)
         user_service = UserService(session)
-        actor = user_service.get_user(uuid.UUID(actor_id))
+        actor = user_service.get_by_id(uuid.UUID(actor_id))
         service.delete_role(actor, role_id)
 
         return (
@@ -131,7 +131,7 @@ def assign_permission(role_id):
     with SessionLocal() as session:
         service = RoleService(session)
         user_service = UserService(session)
-        actor = user_service.get_user(uuid.UUID(actor_id))
+        actor = user_service.get_by_id(uuid.UUID(actor_id))
 
         role = service.assign_permission(
             actor,
@@ -152,7 +152,7 @@ def remove_permission(role_id, permission_id):
     with SessionLocal() as session:
         service = RoleService(session)
         user_service = UserService(session)
-        actor = user_service.get_user(uuid.UUID(actor_id))
+        actor = user_service.get_by_id(uuid.UUID(actor_id))
         role = service.remove_permission(actor, role_id, permission_id)
         response = cast(
             dict[str, Any],
