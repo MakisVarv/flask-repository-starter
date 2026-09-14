@@ -1,25 +1,18 @@
-import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.associations import role_permissions
-from app.config.database import Base
-from app.config.mixins import TimestampMixin
+from app.config.database import BaseModel
 
 if TYPE_CHECKING:
     from app.roles.model import Role
 
 
-class Permission(TimestampMixin, Base):
+class Permission(BaseModel):
 
     __tablename__ = "permissions"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True,
-        default=uuid.uuid4,
-    )
 
     name: Mapped[str] = mapped_column(
         String(50),

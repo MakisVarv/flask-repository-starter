@@ -5,13 +5,13 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.common.base_repository import BaseRepository
 from app.roles.model import Role
 
 
-class RoleRepository:
-
+class RoleRepository(BaseRepository[Role]):
     def __init__(self, session: Session) -> None:
-        self.session = session
+        super().__init__(session, Role)
 
     def get_by_name(self, name: str) -> Role | None:
 
@@ -22,19 +22,6 @@ class RoleRepository:
     def exists(self, name: str) -> bool:
 
         return self.get_by_name(name) is not None
-
-    def get_all(self) -> Sequence[Role]:
-        statement = select(Role)
-        return self.session.scalars(statement).all()
-
-    def get_by_id(self, role_id: uuid.UUID) -> Role | None:
-        return self.session.get(Role, role_id)
-
-    def create(self, role: Role) -> Role:
-        self.session.add(role)
-        self.session.flush()
-        self.session.refresh(role)
-        return role
 
     def update(self, role: Role, data: dict[str, Any]) -> Role:
         if "name" in data:
@@ -50,7 +37,3 @@ class RoleRepository:
         self.session.refresh(role)
 
         return role
-
-    def delete(self, role: Role) -> None:
-        self.session.delete(role)
-        self.session.flush()

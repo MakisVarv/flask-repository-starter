@@ -4,20 +4,14 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.config.database import Base
-from app.config.mixins import TimestampMixin
+from app.config.database import BaseModel
 
 if TYPE_CHECKING:
     from app.roles.model import Role
 
 
-class User(TimestampMixin, Base):
+class User(BaseModel):
     __tablename__ = "users"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True,
-        default=uuid.uuid4,
-    )
 
     first_name: Mapped[str] = mapped_column(
         String(100),

@@ -5,13 +5,15 @@ from typing import Any
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from app.common.base_repository import BaseRepository
 from app.roles.model import Role
 from app.users.model import User
 
 
-class UserRepository:
-    def __init__(self, session: Session):
-        self.session = session
+class UserRepository(BaseRepository[User]):
+
+    def __init__(self, session: Session) -> None:
+        super().__init__(session, User)
 
     def _apply_filters(
         self,
@@ -90,9 +92,6 @@ class UserRepository:
         statement = statement.offset(offset).limit(page_size)
         return self.session.scalars(statement).all()
 
-    def get_by_id(self, user_id: uuid.UUID) -> User | None:
-        return self.session.get(User, user_id)
-
     def count(
         self,
         search: str | None = None,
@@ -116,12 +115,6 @@ class UserRepository:
             or 0
         )
 
-    def create(self, user: User) -> User:
-        self.session.add(user)
-        self.session.flush()
-        self.session.refresh(user)
-        return user
-
     def update(self, user: User, data: dict[str, Any]) -> User:
 
         allowed_fields = {"first_name", "last_name", "email", "phone"}
@@ -139,10 +132,6 @@ class UserRepository:
         user.is_active = is_active
         self.session.flush()
         return user
-
-    def delete(self, user: User) -> None:
-        self.session.delete(user)
-        self.session.flush()
 
     def change_role(self, user: User, role: Role) -> User:
         user.role = role
