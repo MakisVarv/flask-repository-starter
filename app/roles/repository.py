@@ -1,5 +1,3 @@
-import uuid
-from collections.abc import Sequence
 from typing import Any
 
 from sqlalchemy import select
