@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.common.base_repository import BaseRepository
 from app.common.pagination import Pagination
 from app.common.query_options import QueryOptions
+from app.common.sorting import apply_sorting
 from app.roles.model import Role
 from app.users.model import User
 
@@ -80,19 +81,21 @@ class UserRepository(BaseRepository[User]):
             "email": User.email,
             "is_active": User.is_active,
         }
-
         if options.sort_field == "role":
             statement = statement.join(User.role)
-            sort_column = Role.name
-        else:
-            sort_column = sort_columns[options.sort_field]
 
-        order = sort_column.desc() if options.descending else sort_column.asc()
+            order = Role.name.desc() if options.descending else Role.name.asc()
 
-        if options.sort_field == "id":
-            statement = statement.order_by(order)
-        else:
             statement = statement.order_by(order, User.id.asc())
+
+        else:
+            statement = apply_sorting(
+                statement=statement,
+                sort_columns=sort_columns,
+                sort_field=options.sort_field,
+                descending=options.descending,
+                secondary_column=User.id,
+            )
 
         return Pagination.paginate(
             session=self.session,
