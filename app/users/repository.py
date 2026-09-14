@@ -49,7 +49,7 @@ class UserRepository(BaseRepository[User]):
 
         return self.get_by_email(email) is not None
 
-    def get_all(
+    def get_page(
         self,
         page: int = 1,
         page_size: int = 10,

@@ -10,7 +10,6 @@ from app.common.exceptions import ForbiddenException
 from app.common.exceptions.bad_request import BadRequestException
 from app.common.exceptions.conflict import ConflictException
 from app.common.exceptions.not_found import NotFoundException
-from app.common.pagination import Pagination
 from app.roles.model import Role
 from app.roles.repository import RoleRepository
 from app.users.model import User
@@ -135,7 +134,7 @@ class UserService(BaseService[User]):
         descending = sort.startswith("-")
         sort_field = sort.removeprefix("-")
 
-        return self.repository.get_all(
+        return self.repository.get_page(
             page=page,
             page_size=page_size,
             search=search,
