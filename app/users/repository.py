@@ -6,6 +6,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.common.base_repository import BaseRepository
+from app.common.pagination import Pagination
 from app.roles.model import Role
 from app.users.model import User
 
@@ -57,12 +58,18 @@ class UserRepository(BaseRepository[User]):
         is_active: bool | None = None,
         sort_field: str = "id",
         descending: bool = False,
-    ) -> Sequence[User]:
+    ) -> tuple[Sequence[User], dict[str, int | bool]]:
 
-        offset = (page - 1) * page_size
         statement = select(User)
         statement = self._apply_filters(
             statement,
+            search=search,
+            role=role,
+            is_active=is_active,
+        )
+        count_statement = select(func.count(User.id))
+        count_statement = self._apply_filters(
+            count_statement,
             search=search,
             role=role,
             is_active=is_active,
@@ -89,23 +96,13 @@ class UserRepository(BaseRepository[User]):
         else:
             statement = statement.order_by(order, User.id.asc())
 
-        statement = statement.offset(offset).limit(page_size)
-        return self.session.scalars(statement).all()
-
-    def count(
-        self,
-        search: str | None = None,
-        role: str | None = None,
-        is_active: bool | None = None,
-    ) -> int:
-        statement = select(func.count(User.id))
-        statement = self._apply_filters(
-            statement,
-            search=search,
-            role=role,
-            is_active=is_active,
+        return Pagination.paginate(
+            session=self.session,
+            statement=statement,
+            count_statement=count_statement,
+            page=page,
+            page_size=page_size,
         )
-        return self.session.scalar(statement) or 0
 
     def count_by_role(self, role_id: uuid.UUID) -> int:
         return (

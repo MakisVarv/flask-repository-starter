@@ -1,32 +1,40 @@
-from dataclasses import asdict, dataclass
+from collections.abc import Sequence
+from typing import TypeVar
+
+from sqlalchemy import Select
+from sqlalchemy.orm import Session
+
+from app.config.database import BaseModel
+
+ModelType = TypeVar("ModelType", bound=BaseModel)
 
 
-@dataclass
 class Pagination:
-    page: int
-    page_size: int
-    total: int
+    @staticmethod
+    def paginate(
+        *,
+        session: Session,
+        statement: Select[tuple[ModelType]],
+        count_statement: Select[tuple[int]],
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[Sequence[ModelType], dict[str, int | bool]]:
+        page = max(page, 1)
+        page_size = max(min(page_size, 100), 1)
 
-    @property
-    def offset(self) -> int:
-        return self.page_size * (self.page - 1)
+        total = session.scalar(count_statement) or 0
 
-    @property
-    def total_pages(self) -> int:
-        return (self.total + self.page_size - 1) // self.page_size
+        offset = (page - 1) * page_size
 
-    @property
-    def has_next(self) -> bool:
-        return self.page < self.total_pages
+        items = session.scalars(statement.offset(offset).limit(page_size)).all()
 
-    @property
-    def has_previous(self) -> bool:
-        return self.page > 1
+        total_pages = (total + page_size - 1) // page_size
 
-    def to_dict(self) -> dict[str, int | bool]:
-        return {
-            **asdict(self),
-            "total_pages": self.total_pages,
-            "has_next": self.has_next,
-            "has_previous": self.has_previous,
+        return items, {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_previous": page > 1,
         }

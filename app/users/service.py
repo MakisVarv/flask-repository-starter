@@ -10,6 +10,7 @@ from app.common.exceptions import ForbiddenException
 from app.common.exceptions.bad_request import BadRequestException
 from app.common.exceptions.conflict import ConflictException
 from app.common.exceptions.not_found import NotFoundException
+from app.common.pagination import Pagination
 from app.roles.model import Role
 from app.roles.repository import RoleRepository
 from app.users.model import User
@@ -130,10 +131,11 @@ class UserService(BaseService[User]):
         sort: str = "id",
         role: str | None = None,
         is_active: bool | None = None,
-    ) -> tuple[Sequence[User], dict[str, int]]:
+    ) -> tuple[Sequence[User], dict[str, int | bool]]:
         descending = sort.startswith("-")
         sort_field = sort.removeprefix("-")
-        users = self.repository.get_all(
+
+        return self.repository.get_all(
             page=page,
             page_size=page_size,
             search=search,
@@ -142,21 +144,6 @@ class UserService(BaseService[User]):
             sort_field=sort_field,
             descending=descending,
         )
-
-        total = self.repository.count(
-            search=search,
-            role=role,
-            is_active=is_active,
-        )
-
-        total_pages = (total + page_size - 1) // page_size
-
-        return users, {
-            "page": page,
-            "page_size": page_size,
-            "total": total,
-            "total_pages": total_pages,
-        }
 
     def update_user(self, actor: User, user_id: uuid.UUID, data: dict) -> User:
 
