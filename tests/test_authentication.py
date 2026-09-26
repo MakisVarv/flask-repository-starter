@@ -1,9 +1,243 @@
 from sqlalchemy import func, select
+from werkzeug.security import check_password_hash
 
 from app.auth.model import AuthSession
 from app.config.database import SessionLocal
 from app.users.model import User
 from app.users.repository import UserRepository
+
+
+def test_change_password(client, regular_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    access_token = login_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": regular_user["password"],
+            "new_password": "NewPassword123!",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["message"] == "Password changed successfully."
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(regular_user["id"])
+
+        assert user is not None
+        assert check_password_hash(
+            user.password_hash,
+            "NewPassword123!",
+        )
+
+
+def test_change_password_rejects_wrong_current_password(
+    client,
+    regular_user,
+):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": "WrongPassword123!",
+            "new_password": "NewPassword123!",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 401
+    assert response.get_json()["message"] == "Invalid password."
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(regular_user["id"])
+
+        assert user is not None
+        assert check_password_hash(
+            user.password_hash,
+            regular_user["password"],
+        )
+
+
+def test_change_password_revokes_all_refresh_sessions(
+    client,
+    regular_user,
+):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    with SessionLocal() as session:
+        auth_session = session.scalar(
+            select(AuthSession).where(AuthSession.user_id == regular_user["id"])
+        )
+
+        assert auth_session is not None
+        assert auth_session.revoked_at is None
+
+    response = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": regular_user["password"],
+            "new_password": "NewPassword123!",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 200
+
+    with SessionLocal() as session:
+        auth_session = session.scalar(
+            select(AuthSession).where(AuthSession.user_id == regular_user["id"])
+        )
+
+        assert auth_session is not None
+        assert auth_session.revoked_at is not None
+
+
+def test_change_password_requires_fresh_token(
+    client,
+    regular_user,
+):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    csrf_cookie = client.get_cookie("csrf_refresh_token")
+
+    assert csrf_cookie is not None
+
+    refresh_response = client.post(
+        "/api/auth/refresh",
+        headers={
+            "X-CSRF-TOKEN": csrf_cookie.value,
+        },
+    )
+
+    assert refresh_response.status_code == 200
+
+    non_fresh_access_token = refresh_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": regular_user["password"],
+            "new_password": "NewPassword123!",
+        },
+        headers={"Authorization": f"Bearer {non_fresh_access_token}"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_change_password_requires_minimum_password_length(
+    client,
+    regular_user,
+):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": regular_user["password"],
+            "new_password": "short",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 400
+
+    data = response.get_json()
+
+    assert "errors" in data
+    assert "new_password" in data["errors"]
+
+
+def test_old_password_no_longer_works_after_change(
+    client,
+    regular_user,
+):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    change_response = client.post(
+        "/api/auth/change-password",
+        json={
+            "current_password": regular_user["password"],
+            "new_password": "NewPassword123!",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert change_response.status_code == 200
+
+    old_password_login = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert old_password_login.status_code == 401
+
+    new_password_login = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": "NewPassword123!",
+        },
+    )
+
+    assert new_password_login.status_code == 200
 
 
 def test_users_requires_authentication(client):
