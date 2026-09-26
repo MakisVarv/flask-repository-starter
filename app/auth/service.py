@@ -8,7 +8,7 @@ from flask_jwt_extended import (
     decode_token,
 )
 from sqlalchemy.orm import Session
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.auth.model import AuthSession
 from app.auth.repository import AuthSessionRepository
@@ -187,3 +187,31 @@ class AuthService:
         auth_session.revoked_at = datetime.now(timezone.utc)
 
         self.session.commit()
+
+    def change_password(
+        self,
+        user_id: uuid.UUID,
+        current_password: str,
+        new_password: str,
+    ) -> None:
+        user = self.get_current_user(user_id)
+
+        password_ok = check_password_hash(user.password_hash, current_password)
+
+        if not password_ok:
+            raise UnauthorizedException("Invalid password.")
+        try:
+            user.password_hash = generate_password_hash(new_password)
+
+            revoked_at = datetime.now(timezone.utc)
+
+            self.auth_session_repository.revoke_all_for_user(
+                user_id=user.id,
+                revoked_at=revoked_at,
+            )
+
+            self.session.commit()
+
+        except Exception:
+            self.session.rollback()
+            raise
