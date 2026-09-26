@@ -44,3 +44,11 @@ class UpdateMeSchema(Schema):
 
 
 update_me_schema = UpdateMeSchema()
+
+
+class ChangePasswordSchema(Schema):
+    current_password = fields.String(required=True)
+    new_password = fields.String(required=True, validate=validate.Length(min=8))
+
+
+change_password_schema = ChangePasswordSchema()

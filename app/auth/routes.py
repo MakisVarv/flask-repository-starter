@@ -10,7 +10,12 @@ from flask_jwt_extended import (
     unset_refresh_cookies,
 )
 
-from app.auth.schema import login_schema, register_schema, update_me_schema
+from app.auth.schema import (
+    change_password_schema,
+    login_schema,
+    register_schema,
+    update_me_schema,
+)
 from app.auth.service import AuthService
 from app.config.database import SessionLocal
 from app.users.schema import user_schema
@@ -158,3 +163,15 @@ def update_me():
             user_schema.dump(user),
         )
         return response, 200
+
+
+@auth_bp.post("/change-password")
+@jwt_required(fresh=True)
+def change_password():
+    user_id = uuid.UUID(get_jwt_identity())
+    data = cast(
+        dict[str, Any],
+        change_password_schema.load(request.get_json()),
+    )
+    with SessionLocal() as session:
+        service = AuthService(session)
