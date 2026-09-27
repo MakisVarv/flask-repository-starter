@@ -248,3 +248,21 @@ class AuthService:
         except Exception:
             self.session.rollback()
             raise
+
+    def logout_all(
+        self,
+        user_id: uuid.UUID,
+    ) -> None:
+        user = self.get_current_user(user_id)
+
+        try:
+            revoked_at = datetime.now(timezone.utc)
+
+            self.auth_session_repository.revoke_all_for_user(
+                user_id=user.id,
+                revoked_at=revoked_at,
+            )
+            self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise

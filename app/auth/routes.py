@@ -182,6 +182,7 @@ def change_password():
             new_password=data["new_password"],
         )
         response = jsonify({"message": "Password changed successfully."})
+        unset_refresh_cookies(response)
         return response, 200
 
 
@@ -201,4 +202,17 @@ def change_email():
             new_email=data["new_email"],
         )
         response = jsonify({"message": "Email changed successfully."})
+        unset_refresh_cookies(response)
+        return response, 200
+
+
+@auth_bp.post("/logout-all")
+@jwt_required(fresh=True)
+def logout_all():
+    user_id = uuid.UUID(get_jwt_identity())
+    with SessionLocal() as session:
+        service = AuthService(session)
+        service.logout_all(user_id=user_id)
+        response = jsonify({"message": "Logged out from all sessions successfully."})
+        unset_refresh_cookies(response)
         return response, 200
