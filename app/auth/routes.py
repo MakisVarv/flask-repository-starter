@@ -10,7 +10,7 @@ from flask_jwt_extended import (
     unset_refresh_cookies,
 )
 
-from app.auth.password_reset_smtp_mailer import SMTPPasswordResetMailer
+from app.auth.password_reset.password_reset_smtp_mailer import SMTPPasswordResetMailer
 from app.auth.schema import (
     change_email_schema,
     change_password_schema,
@@ -227,9 +227,18 @@ def forgot_password():
         dict[str, Any],
         forgot_password_schema.load(request.get_json()),
     )
+    mailer = SMTPPasswordResetMailer(
+        host=current_app.config["MAIL_HOST"],
+        port=current_app.config["MAIL_PORT"],
+        sender=current_app.config["MAIL_FROM"],
+        frontend_origin=current_app.config["FRONTEND_ORIGIN"],
+        username=current_app.config["MAIL_USERNAME"],
+        password=current_app.config["MAIL_PASSWORD"],
+        use_tls=current_app.config["MAIL_USE_TLS"],
+    )
 
     with SessionLocal() as session:
-        service = AuthService(session)
+        service = AuthService(session, password_reset_mailer=mailer)
 
         service.request_password_reset(
             email=data["email"],
@@ -253,18 +262,8 @@ def reset_password():
         dict[str, Any],
         reset_password_schema.load(request.get_json()),
     )
-    mailer = SMTPPasswordResetMailer(
-        host=current_app.config["MAIL_HOST"],
-        port=current_app.config["MAIL_PORT"],
-        sender=current_app.config["MAIL_FROM"],
-        frontend_origin=current_app.config["FRONTEND_ORIGIN"],
-        username=current_app.config["MAIL_USERNAME"],
-        password=current_app.config["MAIL_PASSWORD"],
-        use_tls=current_app.config["MAIL_USE_TLS"],
-    )
-
     with SessionLocal() as session:
-        service = AuthService(session, password_reset_mailer=mailer)
+        service = AuthService(session)
 
         service.reset_password(
             raw_token=data["token"],

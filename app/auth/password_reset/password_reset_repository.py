@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.auth.password_reset_model import PasswordResetToken
+from app.auth.password_reset.password_reset_model import PasswordResetToken
 from app.common.base_repository import BaseRepository
 
 

@@ -1,6 +1,6 @@
 import smtplib
-from email.message import EmailMessage
 import ssl
+from email.message import EmailMessage
 from urllib.parse import urlencode
 
 

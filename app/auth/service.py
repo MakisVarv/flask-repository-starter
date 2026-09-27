@@ -13,9 +13,11 @@ from sqlalchemy.orm import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.auth.model import AuthSession
-from app.auth.password_reset_mailer import PasswordResetMailer
-from app.auth.password_reset_model import PasswordResetToken
-from app.auth.password_reset_repository import PasswordResetTokenRepository
+from app.auth.password_reset.password_reset_mailer import PasswordResetMailer
+from app.auth.password_reset.password_reset_model import PasswordResetToken
+from app.auth.password_reset.password_reset_repository import (
+    PasswordResetTokenRepository,
+)
 from app.auth.repository import AuthSessionRepository
 from app.common.exceptions import NotFoundException, UnauthorizedException
 from app.common.exceptions.bad_request import BadRequestException
