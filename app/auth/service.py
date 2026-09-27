@@ -1,5 +1,7 @@
+import hashlib
+import secrets
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from flask_jwt_extended import (
@@ -11,6 +13,8 @@ from sqlalchemy.orm import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.auth.model import AuthSession
+from app.auth.password_reset_model import PasswordResetToken
+from app.auth.password_reset_repository import PasswordResetTokenRepository
 from app.auth.repository import AuthSessionRepository
 from app.common.exceptions import NotFoundException, UnauthorizedException
 from app.common.exceptions.bad_request import BadRequestException
@@ -25,6 +29,7 @@ class AuthService:
         self.user_service = UserService(session)
         self.user_repository = UserRepository(session)
         self.auth_session_repository = AuthSessionRepository(session)
+        self.password_reset_repository = PasswordResetTokenRepository(session)
 
     def register(
         self,
@@ -263,6 +268,30 @@ class AuthService:
                 revoked_at=revoked_at,
             )
             self.session.commit()
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def request_password_reset(
+        self,
+        email: str,
+    ) -> str | None:
+        user = self.user_repository.get_by_email(email=email)
+        if user is None or not user.is_active:
+            return None
+        try:
+            self.password_reset_repository.delete_unused_for_user(user_id=user.id)
+            raw_token = secrets.token_urlsafe(32)
+            token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+            now = datetime.now(timezone.utc)
+            expires_at = now + timedelta(minutes=30)
+            self.password_reset_repository.create(
+                PasswordResetToken(
+                    user_id=user.id, token_hash=token_hash, expires_at=expires_at
+                )
+            )
+            self.session.commit()
+            return raw_token
         except Exception:
             self.session.rollback()
             raise
