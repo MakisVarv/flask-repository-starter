@@ -52,3 +52,8 @@ class ChangePasswordSchema(Schema):
 
 
 change_password_schema = ChangePasswordSchema()
+
+
+class ChangeEmailSchema(Schema):
+    current_password = fields.String(required=True)
+    new_email = fields.Email(required=True)
