@@ -11,6 +11,7 @@ from flask_jwt_extended import (
 )
 
 from app.auth.schema import (
+    change_email_schema,
     change_password_schema,
     login_schema,
     register_schema,
@@ -181,4 +182,23 @@ def change_password():
             new_password=data["new_password"],
         )
         response = jsonify({"message": "Password changed successfully."})
+        return response, 200
+
+
+@auth_bp.post("/change-email")
+@jwt_required(fresh=True)
+def change_email():
+    user_id = uuid.UUID(get_jwt_identity())
+    data = cast(
+        dict[str, Any],
+        change_email_schema.load(request.get_json()),
+    )
+    with SessionLocal() as session:
+        service = AuthService(session)
+        service.change_email(
+            user_id=user_id,
+            current_password=data["current_password"],
+            new_email=data["new_email"],
+        )
+        response = jsonify({"message": "Email changed successfully."})
         return response, 200
