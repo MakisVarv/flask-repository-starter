@@ -7,6 +7,233 @@ from app.users.model import User
 from app.users.repository import UserRepository
 
 
+def test_change_email(client, regular_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/change-email",
+        json={
+            "current_password": regular_user["password"],
+            "new_email": "newjohn@example.com",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["message"] == "Email changed successfully."
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(regular_user["id"])
+
+        assert user is not None
+        assert user.email == "newjohn@example.com"
+
+
+def test_change_email_rejects_wrong_password(client, regular_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/change-email",
+        json={
+            "current_password": "WrongPassword123!",
+            "new_email": "newjohn@example.com",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 401
+    assert response.get_json()["message"] == "Invalid password."
+
+    with SessionLocal() as session:
+        user_repository = UserRepository(session)
+        user = user_repository.get_by_id(regular_user["id"])
+
+        assert user is not None
+        assert user.email == regular_user["email"]
+
+
+def test_change_email_rejects_existing_email(
+    client,
+    regular_user,
+    admin_user,
+):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/change-email",
+        json={
+            "current_password": regular_user["password"],
+            "new_email": admin_user["email"],
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["message"] == "Email already exists."
+
+
+def test_change_email_requires_fresh_token(client, regular_user):
+    client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    csrf_cookie = client.get_cookie("csrf_refresh_token")
+    assert csrf_cookie is not None
+
+    refresh_response = client.post(
+        "/api/auth/refresh",
+        headers={"X-CSRF-TOKEN": csrf_cookie.value},
+    )
+
+    assert refresh_response.status_code == 200
+
+    non_fresh_token = refresh_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/change-email",
+        json={
+            "current_password": regular_user["password"],
+            "new_email": "newjohn@example.com",
+        },
+        headers={"Authorization": f"Bearer {non_fresh_token}"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_change_email_rejects_invalid_email(client, regular_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/change-email",
+        json={
+            "current_password": regular_user["password"],
+            "new_email": "not-an-email",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 400
+
+    data = response.get_json()
+
+    assert "errors" in data
+    assert "new_email" in data["errors"]
+
+
+def test_change_email_revokes_refresh_sessions(client, regular_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    with SessionLocal() as session:
+        auth_session = session.scalar(
+            select(AuthSession).where(AuthSession.user_id == regular_user["id"])
+        )
+
+        assert auth_session is not None
+        assert auth_session.revoked_at is None
+
+    response = client.post(
+        "/api/auth/change-email",
+        json={
+            "current_password": regular_user["password"],
+            "new_email": "newjohn@example.com",
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 200
+
+    with SessionLocal() as session:
+        auth_session = session.scalar(
+            select(AuthSession).where(AuthSession.user_id == regular_user["id"])
+        )
+
+        assert auth_session is not None
+        assert auth_session.revoked_at is not None
+
+
+def test_change_email_to_same_email_is_noop(client, regular_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    access_token = login_response.get_json()["access_token"]
+
+    with SessionLocal() as session:
+        auth_session = session.scalar(
+            select(AuthSession).where(AuthSession.user_id == regular_user["id"])
+        )
+
+        assert auth_session is not None
+        sid = auth_session.id
+
+    response = client.post(
+        "/api/auth/change-email",
+        json={
+            "current_password": regular_user["password"],
+            "new_email": regular_user["email"],
+        },
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 200
+
+    with SessionLocal() as session:
+        auth_session = session.get(AuthSession, sid)
+
+        assert auth_session is not None
+        assert auth_session.revoked_at is None
+
+
 def test_change_password(client, regular_user):
     login_response = client.post(
         "/api/auth/login",
