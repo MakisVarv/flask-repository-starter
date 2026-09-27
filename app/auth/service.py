@@ -13,6 +13,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from app.auth.model import AuthSession
 from app.auth.repository import AuthSessionRepository
 from app.common.exceptions import NotFoundException, UnauthorizedException
+from app.common.exceptions.bad_request import BadRequestException
 from app.users.model import User
 from app.users.repository import UserRepository
 from app.users.service import UserService
@@ -212,6 +213,34 @@ class AuthService:
 
             self.session.commit()
 
+        except Exception:
+            self.session.rollback()
+            raise
+
+    def change_email(
+        self,
+        user_id: uuid.UUID,
+        current_password: str,
+        new_email: str,
+    ) -> None:
+        user = self.get_current_user(user_id)
+
+        password_ok = check_password_hash(user.password_hash, current_password)
+
+        if not password_ok:
+            raise UnauthorizedException("Invalid password.")
+
+        if self.user_repository.get_by_email(new_email):
+            raise BadRequestException("Email already exists.")
+        try:
+            user.email = new_email
+            revoked_at = datetime.now(timezone.utc)
+
+            self.auth_session_repository.revoke_all_for_user(
+                user_id=user.id,
+                revoked_at=revoked_at,
+            )
+            self.session.commit()
         except Exception:
             self.session.rollback()
             raise
