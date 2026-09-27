@@ -331,11 +331,12 @@ class AuthService:
         try:
             user.password_hash = generate_password_hash(new_password)
             reset_token.used_at = now
+            self.session.flush()
             self.password_reset_repository.delete_unused_for_user(user_id=user.id)
             self.auth_session_repository.revoke_all_for_user(
                 user_id=user.id, revoked_at=now
             )
             self.session.commit()
-        except:
+        except Exception:
             self.session.rollback()
             raise
