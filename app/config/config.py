@@ -19,6 +19,13 @@ class Config:
     JWT_COOKIE_CSRF_PROTECT = True
     JWT_REFRESH_COOKIE_PATH = "/api/auth"
 
+    MAIL_HOST = os.getenv("MAIL_HOST", "localhost")
+    MAIL_PORT = int(os.getenv("MAIL_PORT", "1025"))
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+    MAIL_FROM = os.getenv("MAIL_FROM", "no-reply@example.com")
+    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "false").lower() == "true"
+
 
 class DevelopmentConfig(Config):
     JWT_COOKIE_SECURE = False
