@@ -230,8 +230,12 @@ class AuthService:
         if not password_ok:
             raise UnauthorizedException("Invalid password.")
 
-        if self.user_repository.get_by_email(new_email):
+        existing_user = self.user_repository.get_by_email(new_email)
+
+        if existing_user is not None and existing_user.id != user.id:
             raise BadRequestException("Email already exists.")
+        if new_email == user.email:
+            return
         try:
             user.email = new_email
             revoked_at = datetime.now(timezone.utc)
