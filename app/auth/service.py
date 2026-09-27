@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.auth.model import AuthSession
+from app.auth.password_reset_mailer import PasswordResetMailer
 from app.auth.password_reset_model import PasswordResetToken
 from app.auth.password_reset_repository import PasswordResetTokenRepository
 from app.auth.repository import AuthSessionRepository
@@ -24,12 +25,18 @@ from app.users.service import UserService
 
 
 class AuthService:
-    def __init__(self, session: Session) -> None:
+
+    def __init__(
+        self,
+        session: Session,
+        password_reset_mailer: PasswordResetMailer | None = None,
+    ) -> None:
         self.session = session
         self.user_service = UserService(session)
         self.user_repository = UserRepository(session)
         self.auth_session_repository = AuthSessionRepository(session)
         self.password_reset_repository = PasswordResetTokenRepository(session)
+        self.password_reset_mailer = password_reset_mailer
 
     def register(
         self,
@@ -275,10 +282,12 @@ class AuthService:
     def request_password_reset(
         self,
         email: str,
-    ) -> str | None:
+    ) -> None:
         user = self.user_repository.get_by_email(email=email)
         if user is None or not user.is_active:
             return None
+        if self.password_reset_mailer is None:
+            raise RuntimeError("Password reset mailer is not configured.")
         try:
             self.password_reset_repository.delete_unused_for_user(user_id=user.id)
             raw_token = secrets.token_urlsafe(32)
@@ -291,10 +300,15 @@ class AuthService:
                 )
             )
             self.session.commit()
-            return raw_token
+
         except Exception:
             self.session.rollback()
             raise
+
+        self.password_reset_mailer.send_password_reset(
+            email=user.email,
+            raw_token=raw_token,
+        )
 
     def reset_password(
         self,
