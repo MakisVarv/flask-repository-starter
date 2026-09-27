@@ -287,7 +287,7 @@ class AuthService:
     ) -> None:
         user = self.user_repository.get_by_email(email=email)
         if user is None or not user.is_active:
-            return None
+            return
         if self.password_reset_mailer is None:
             raise RuntimeError("Password reset mailer is not configured.")
         try:
