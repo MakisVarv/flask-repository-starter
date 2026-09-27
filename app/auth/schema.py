@@ -60,3 +60,21 @@ class ChangeEmailSchema(Schema):
 
 
 change_email_schema = ChangeEmailSchema()
+
+
+class ForgotPasswordSchema(Schema):
+    email = fields.Email(required=True)
+
+
+forgot_password_schema = ForgotPasswordSchema()
+
+
+class ResetPasswordSchema(Schema):
+    token = fields.String(required=True)
+    new_password = fields.String(
+        required=True,
+        validate=validate.Length(min=8),
+    )
+
+
+reset_password_schema = ResetPasswordSchema()

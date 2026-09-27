@@ -13,8 +13,10 @@ from flask_jwt_extended import (
 from app.auth.schema import (
     change_email_schema,
     change_password_schema,
+    forgot_password_schema,
     login_schema,
     register_schema,
+    reset_password_schema,
     update_me_schema,
 )
 from app.auth.service import AuthService
@@ -215,4 +217,50 @@ def logout_all():
         service.logout_all(user_id=user_id)
         response = jsonify({"message": "Logged out from all sessions successfully."})
         unset_refresh_cookies(response)
+        return response, 200
+
+
+@auth_bp.post("/forgot-password")
+def forgot_password():
+    data = cast(
+        dict[str, Any],
+        forgot_password_schema.load(request.get_json()),
+    )
+
+    with SessionLocal() as session:
+        service = AuthService(session)
+
+        service.request_password_reset(
+            email=data["email"],
+        )
+
+        response = jsonify(
+            {
+                "message": (
+                    "If an account exists for that email, "
+                    "a password reset link has been sent."
+                )
+            }
+        )
+
+        return response, 200
+
+
+@auth_bp.post("/reset-password")
+def reset_password():
+    data = cast(
+        dict[str, Any],
+        reset_password_schema.load(request.get_json()),
+    )
+
+    with SessionLocal() as session:
+        service = AuthService(session)
+
+        service.reset_password(
+            raw_token=data["token"],
+            new_password=data["new_password"],
+        )
+
+        response = jsonify({"message": "Password reset successfully."})
+
         return response, 200

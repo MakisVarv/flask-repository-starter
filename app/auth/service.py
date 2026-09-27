@@ -295,3 +295,33 @@ class AuthService:
         except Exception:
             self.session.rollback()
             raise
+
+    def reset_password(
+        self,
+        raw_token: str,
+        new_password: str,
+    ) -> None:
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+
+        now = datetime.now(timezone.utc)
+
+        reset_token = self.password_reset_repository.get_valid_by_hash(
+            token_hash=token_hash,
+            now=now,
+        )
+        if reset_token is None:
+            raise BadRequestException("Invalid or expired password reset token.")
+        user = self.user_repository.get_by_id(reset_token.user_id)
+        if user is None or not user.is_active:
+            raise BadRequestException("Invalid or expired password reset token.")
+        try:
+            user.password_hash = generate_password_hash(new_password)
+            reset_token.used_at = now
+            self.password_reset_repository.delete_unused_for_user(user_id=user.id)
+            self.auth_session_repository.revoke_all_for_user(
+                user_id=user.id, revoked_at=now
+            )
+            self.session.commit()
+        except:
+            self.session.rollback()
+            raise
