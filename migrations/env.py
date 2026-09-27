@@ -4,6 +4,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.auth.model import AuthSession  # noqa: F401
+from app.auth.password_reset_model import PasswordResetToken  # noqa: F401
 from app.config.config import Config
 from app.config.database import Base
 from app.permissions.model import Permission  # noqa: F401
