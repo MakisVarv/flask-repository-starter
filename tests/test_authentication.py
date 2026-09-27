@@ -7,6 +7,225 @@ from app.users.model import User
 from app.users.repository import UserRepository
 
 
+def test_logout_all(client, regular_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    access_token = login_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/logout-all",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 200
+    assert (
+        response.get_json()["message"] == "Logged out from all sessions successfully."
+    )
+
+    refresh_cookie = client.get_cookie(
+        "refresh_token_cookie",
+        path="/api/auth",
+    )
+
+    assert refresh_cookie is None
+
+
+def test_logout_all_revokes_every_user_session(client, regular_user):
+    # First session
+    first_login = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert first_login.status_code == 200
+
+    # Second session
+    second_login = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert second_login.status_code == 200
+
+    access_token = second_login.get_json()["access_token"]
+
+    with SessionLocal() as session:
+        auth_sessions = session.scalars(
+            select(AuthSession).where(AuthSession.user_id == regular_user["id"])
+        ).all()
+
+        assert len(auth_sessions) == 2
+        assert all(auth_session.revoked_at is None for auth_session in auth_sessions)
+
+    response = client.post(
+        "/api/auth/logout-all",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert response.status_code == 200
+
+    with SessionLocal() as session:
+        auth_sessions = session.scalars(
+            select(AuthSession).where(AuthSession.user_id == regular_user["id"])
+        ).all()
+
+        assert len(auth_sessions) == 2
+        assert all(
+            auth_session.revoked_at is not None for auth_session in auth_sessions
+        )
+
+
+def test_logout_all_does_not_revoke_other_users_sessions(
+    client,
+    regular_user,
+    admin_user,
+):
+    regular_login = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert regular_login.status_code == 200
+
+    regular_access_token = regular_login.get_json()["access_token"]
+
+    admin_login = client.post(
+        "/api/auth/login",
+        json=admin_user,
+    )
+
+    assert admin_login.status_code == 200
+
+    response = client.post(
+        "/api/auth/logout-all",
+        headers={"Authorization": f"Bearer {regular_access_token}"},
+    )
+
+    assert response.status_code == 200
+
+    with SessionLocal() as session:
+        regular_session = session.scalar(
+            select(AuthSession).where(AuthSession.user_id == regular_user["id"])
+        )
+
+        admin = UserRepository(session).get_by_email(admin_user["email"])
+
+        assert admin is not None
+
+        admin_session = session.scalar(
+            select(AuthSession).where(AuthSession.user_id == admin.id)
+        )
+
+        assert regular_session is not None
+        assert admin_session is not None
+
+        assert regular_session.revoked_at is not None
+        assert admin_session.revoked_at is None
+
+
+def test_logout_all_requires_fresh_token(client, regular_user):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    csrf_cookie = client.get_cookie("csrf_refresh_token")
+
+    assert csrf_cookie is not None
+
+    refresh_response = client.post(
+        "/api/auth/refresh",
+        headers={
+            "X-CSRF-TOKEN": csrf_cookie.value,
+        },
+    )
+
+    assert refresh_response.status_code == 200
+
+    non_fresh_access_token = refresh_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/logout-all",
+        headers={"Authorization": f"Bearer {non_fresh_access_token}"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_logout_all_revoked_refresh_token_cannot_refresh(
+    client,
+    regular_user,
+):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    access_token = login_response.get_json()["access_token"]
+
+    refresh_cookie = client.get_cookie(
+        "refresh_token_cookie",
+        path="/api/auth",
+    )
+
+    csrf_cookie = client.get_cookie("csrf_refresh_token")
+
+    assert refresh_cookie is not None
+    assert csrf_cookie is not None
+
+    logout_response = client.post(
+        "/api/auth/logout-all",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+
+    assert logout_response.status_code == 200
+
+    # Restore the refresh token that the route removed from the browser.
+    # This proves server-side revocation still prevents its use.
+    client.set_cookie(
+        "refresh_token_cookie",
+        refresh_cookie.value,
+        path="/api/auth",
+    )
+
+    refresh_response = client.post(
+        "/api/auth/refresh",
+        headers={
+            "X-CSRF-TOKEN": csrf_cookie.value,
+        },
+    )
+
+    assert refresh_response.status_code == 401
+    assert refresh_response.get_json()["message"] == "Refresh session revoked."
+
+
 def test_change_email(client, regular_user):
     login_response = client.post(
         "/api/auth/login",
