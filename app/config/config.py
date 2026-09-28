@@ -26,6 +26,11 @@ class Config:
     MAIL_FROM = os.getenv("MAIL_FROM", "no-reply@example.com")
     MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "false").lower() == "true"
 
+    RATELIMIT_STORAGE_URI = os.getenv(
+        "RATELIMIT_STORAGE_URI",
+        "memory://",
+    )
+
 
 class DevelopmentConfig(Config):
     JWT_COOKIE_SECURE = False
