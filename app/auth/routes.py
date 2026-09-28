@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 from typing import Any, cast
 
@@ -39,7 +40,10 @@ def login_email_key() -> str:
     if not isinstance(email, str):
         return "unknown-email"
 
-    return email.strip().lower()
+    normalized_email = email.strip().lower()
+    if not normalized_email:
+        return "unknown-email"
+    return hashlib.sha256(normalized_email.encode()).hexdigest()
 
 
 @auth_bp.post("/register")
