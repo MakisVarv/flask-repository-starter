@@ -1,0 +1,2 @@
+class PasswordResetDeliveryError(Exception):
+    pass

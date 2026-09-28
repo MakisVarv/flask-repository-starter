@@ -3,6 +3,8 @@ import ssl
 from email.message import EmailMessage
 from urllib.parse import urlencode
 
+from app.auth.password_reset.password_reset_exceptions import PasswordResetDeliveryError
+
 
 class SMTPPasswordResetMailer:
     def __init__(
@@ -42,16 +44,21 @@ class SMTPPasswordResetMailer:
             f"Reset your password here:\n{reset_url}\n\n"
             "If you did not request this, you can ignore this email."
         )
+        try:
 
-        with smtplib.SMTP(self.host, self.port) as smtp:
-            if self.use_tls:
-                context = ssl.create_default_context()
-                smtp.starttls(context=context)
+            with smtplib.SMTP(self.host, self.port) as smtp:
+                if self.use_tls:
+                    context = ssl.create_default_context()
+                    smtp.starttls(context=context)
 
-            if self.username and self.password:
-                smtp.login(
-                    self.username,
-                    self.password,
-                )
+                if self.username and self.password:
+                    smtp.login(
+                        self.username,
+                        self.password,
+                    )
 
-            smtp.send_message(message)
+                smtp.send_message(message)
+        except (smtplib.SMTPException, OSError) as exc:
+            raise PasswordResetDeliveryError(
+                "Failed to deliver password reset email."
+            ) from exc
