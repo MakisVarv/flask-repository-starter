@@ -34,7 +34,7 @@ auth_bp = Blueprint(
 )
 
 
-def login_email_key() -> str:
+def email_rate_limit_key() -> str:
     data = request.get_json(silent=True) or {}
     email = data.get("email")
     if not isinstance(email, str):
@@ -74,7 +74,7 @@ def register():
 @limiter.limit("5 per minute")
 @limiter.limit(
     "10 per 15 minutes",
-    key_func=login_email_key,
+    key_func=email_rate_limit_key,
 )
 def login():
 
@@ -243,6 +243,10 @@ def logout_all():
 
 @auth_bp.post("/forgot-password")
 @limiter.limit("3 per 15 minutes")
+@limiter.limit(
+    "10 per 15 minutes",
+    key_func=email_rate_limit_key,
+)
 def forgot_password():
     data = cast(
         dict[str, Any],
