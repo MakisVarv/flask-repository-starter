@@ -40,3 +40,4 @@ class TestingConfig(Config):
     TESTING = True
     DATABASE_URL: str | None = os.getenv("TEST_DATABASE_URL")
     JWT_COOKIE_SECURE = False
+    RATELIMIT_STORAGE_URI = "memory://"

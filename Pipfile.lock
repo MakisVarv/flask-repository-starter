@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "a04f777aaec006f44cf8d8da2fb753fdcf8ea87d044f4fcca4441f50223ccd76"
+            "sha256": "923922fe660ab55a8c3c8e11329bc5a898bdf9b77cefa0d0507aaa1731553f34"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -42,14 +42,6 @@
             "markers": "python_version >= '3.10'",
             "version": "==8.5.0"
         },
-        "colorama": {
-            "hashes": [
-                "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44",
-                "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"
-            ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6'",
-            "version": "==0.4.6"
-        },
         "deprecated": {
             "hashes": [
                 "sha256:16850204d3a1e6bb0acd06bff48d96e8b0a0d25d1c52f71705405a0f4894192d",
@@ -86,11 +78,13 @@
             "version": "==4.7.4"
         },
         "flask-limiter": {
+            "extras": [
+                "redis"
+            ],
             "hashes": [
                 "sha256:ca11608fc7eec43dcea606964ca07c3bd4ec1ae89043a0f67f717899a4f48106",
                 "sha256:e1ae13e06e6b3e39a4902e7d240b901586b25932c2add7bd5f5eeb4bdc11111b"
             ],
-            "index": "pypi",
             "markers": "python_version >= '3.10'",
             "version": "==4.1.1"
         },
@@ -196,6 +190,9 @@
             "version": "==3.1.6"
         },
         "limits": {
+            "extras": [
+                "redis"
+            ],
             "hashes": [
                 "sha256:ae1b008a43eb43073c3c579398bd4eb4c795de60952532dc24720ab45e1ac6b8",
                 "sha256:c9e0d74aed837e8f6f50d1fcebcf5fd8130957287206bc3799adaee5092655da"
@@ -419,6 +416,14 @@
             "index": "pypi",
             "markers": "python_version >= '3.10'",
             "version": "==1.2.3"
+        },
+        "redis": {
+            "hashes": [
+                "sha256:1a1df5067062cf7cbe677994e391f8ee0840f499d370f1a71266e0dd3aa9308e",
+                "sha256:1fa4647af1c5e93a2c685aa248ee44cce092691146d41390518dabe9a99839b0"
+            ],
+            "markers": "python_version >= '3.10'",
+            "version": "==7.4.1"
         },
         "sqlalchemy": {
             "hashes": [

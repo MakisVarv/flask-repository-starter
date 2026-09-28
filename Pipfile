@@ -12,7 +12,7 @@ alembic = "*"
 marshmallow = "*"
 flask-jwt-extended = "*"
 flask-cors = "*"
-flask-limiter = "*"
+flask-limiter = {extras = ["redis"], version = "*"}
 
 [dev-packages]
 black = "*"

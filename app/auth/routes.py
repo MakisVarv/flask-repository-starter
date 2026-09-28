@@ -23,6 +23,7 @@ from app.auth.schema import (
 )
 from app.auth.service import AuthService
 from app.config.database import SessionLocal
+from app.config.extensions import limiter
 from app.users.schema import user_schema
 
 auth_bp = Blueprint(
@@ -30,6 +31,15 @@ auth_bp = Blueprint(
     __name__,
     url_prefix="/api/auth",
 )
+
+
+def login_email_key() -> str:
+    data = request.get_json(silent=True) or {}
+    email = data.get("email")
+    if not isinstance(email, str):
+        return "unknown-email"
+
+    return email.strip().lower()
 
 
 @auth_bp.post("/register")
@@ -57,6 +67,11 @@ def register():
 
 
 @auth_bp.post("/login")
+@limiter.limit("5 per minute")
+@limiter.limit(
+    "10 per 15 minutes",
+    key_func=login_email_key,
+)
 def login():
 
     data = cast(
@@ -223,6 +238,7 @@ def logout_all():
 
 
 @auth_bp.post("/forgot-password")
+@limiter.limit("3 per 15 minutes")
 def forgot_password():
     data = cast(
         dict[str, Any],
