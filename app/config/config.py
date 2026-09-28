@@ -30,6 +30,7 @@ class Config:
         "RATELIMIT_STORAGE_URI",
         "memory://",
     )
+    RATELIMIT_HEADERS_ENABLED = True
 
 
 class DevelopmentConfig(Config):
