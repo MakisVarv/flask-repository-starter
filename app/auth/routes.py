@@ -10,6 +10,7 @@ from flask_jwt_extended import (
     unset_refresh_cookies,
 )
 
+from app.auth.password_reset.password_reset_exceptions import PasswordResetDeliveryError
 from app.auth.password_reset.password_reset_smtp_mailer import SMTPPasswordResetMailer
 from app.auth.schema import (
     change_email_schema,
@@ -238,12 +239,14 @@ def forgot_password():
     )
 
     with SessionLocal() as session:
+
         service = AuthService(session, password_reset_mailer=mailer)
-
-        service.request_password_reset(
-            email=data["email"],
-        )
-
+        try:
+            service.request_password_reset(
+                email=data["email"],
+            )
+        except PasswordResetDeliveryError:
+            current_app.logger.exception("Password reset email delivery failed.")
         response = jsonify(
             {
                 "message": (

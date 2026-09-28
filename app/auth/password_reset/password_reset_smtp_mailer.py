@@ -45,7 +45,6 @@ class SMTPPasswordResetMailer:
             "If you did not request this, you can ignore this email."
         )
         try:
-
             with smtplib.SMTP(self.host, self.port) as smtp:
                 if self.use_tls:
                     context = ssl.create_default_context()
