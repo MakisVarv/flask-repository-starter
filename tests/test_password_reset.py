@@ -7,6 +7,7 @@ from sqlalchemy import select
 from werkzeug.security import check_password_hash
 
 from app.auth.model import AuthSession
+from app.auth.password_reset.password_reset_exceptions import PasswordResetDeliveryError
 from app.auth.password_reset.password_reset_model import PasswordResetToken
 from app.auth.service import AuthService
 from app.common.exceptions.bad_request import BadRequestException
@@ -34,6 +35,36 @@ class FakePasswordResetMailer:
 @pytest.fixture
 def password_reset_mailer():
     return FakePasswordResetMailer()
+
+
+def test_forgot_password_hides_email_delivery_failure(
+    client,
+    regular_user,
+    monkeypatch,
+):
+    class FailingMailer:
+        def send_password_reset(
+            self,
+            email: str,
+            raw_token: str,
+        ) -> None:
+            raise PasswordResetDeliveryError("Failed to deliver password reset email.")
+
+    monkeypatch.setattr(
+        "app.auth.routes.SMTPPasswordResetMailer",
+        lambda **kwargs: FailingMailer(),
+    )
+
+    response = client.post(
+        "/api/auth/forgot-password",
+        json={"email": regular_user["email"]},
+    )
+
+    assert response.status_code == 200
+    assert (
+        response.get_json()["message"] == "If an account exists for that email, "
+        "a password reset link has been sent."
+    )
 
 
 def test_request_password_reset_creates_token_and_sends_email(
