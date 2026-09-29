@@ -18,6 +18,7 @@ from app.auth.schema import (
     change_password_schema,
     forgot_password_schema,
     login_schema,
+    reauthenticate_schema,
     register_schema,
     reset_password_schema,
     update_me_schema,
@@ -299,4 +300,29 @@ def reset_password():
 
         response = jsonify({"message": "Password reset successfully."})
 
+        return response, 200
+
+
+@auth_bp.post("/reauthenticate")
+@jwt_required()
+def reauthenticate():
+    user_id = uuid.UUID(get_jwt_identity())
+    data = cast(
+        dict[str, Any],
+        reauthenticate_schema.load(request.get_json()),
+    )
+    claims = get_jwt()
+    sid = uuid.UUID(claims["sid"])
+    with SessionLocal() as session:
+        service = AuthService(session)
+        access_token = service.reauthenticate(
+            user_id=user_id,
+            sid=sid,
+            current_password=data["current_password"],
+        )
+        response = jsonify(
+            {
+                "access_token": access_token,
+            }
+        )
         return response, 200
