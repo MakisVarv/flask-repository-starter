@@ -368,7 +368,7 @@ class AuthService:
             raise UnauthorizedException("Invalid password.")
         access_token = create_access_token(
             identity=str(user.id),
-            fresh=True,
+            fresh=timedelta(minutes=10),
             additional_claims={"sid": str(sid)},
         )
         return access_token
