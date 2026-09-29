@@ -343,7 +343,12 @@ class AuthService:
             self.session.rollback()
             raise
 
-    def reauthenticate(self, user_id, sid, current_password):
+    def reauthenticate(
+        self,
+        user_id: uuid.UUID,
+        sid: uuid.UUID,
+        current_password: str,
+    ) -> str:
         user = self.get_current_user(user_id)
         auth_session = self.auth_session_repository.get_by_id(sid)
         if auth_session is None:
