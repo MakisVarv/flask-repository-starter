@@ -1,5 +1,7 @@
+import fractions
 import hashlib
 import secrets
+from tokenize import Triple
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -342,3 +344,28 @@ class AuthService:
         except Exception:
             self.session.rollback()
             raise
+
+    def reauthenticate(self, user_id, sid, current_password):
+        user = self.get_current_user(user_id)
+        auth_session = self.auth_session_repository.get_by_id(sid)
+        if auth_session is None:
+            raise UnauthorizedException("Invalid session.")
+
+        if auth_session.revoked_at is not None:
+            raise UnauthorizedException("Invalid session.")
+
+        if auth_session.expires_at <= datetime.now(timezone.utc):
+            raise UnauthorizedException("Invalid session.")
+
+        if auth_session.user_id != user_id:
+            raise UnauthorizedException("Invalid session.")
+
+        password_ok = check_password_hash(user.password_hash, current_password)
+        if not password_ok:
+            raise UnauthorizedException("Invalid password.")
+        access_token = create_access_token(
+            identity=str(user.id),
+            fresh=True,
+            additional_claims={"sid": str(sid)},
+        )
+        return access_token
