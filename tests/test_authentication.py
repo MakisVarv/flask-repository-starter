@@ -591,7 +591,6 @@ def test_change_password_requires_fresh_token(
     response = client.post(
         "/api/auth/change-password",
         json={
-            "current_password": regular_user["password"],
             "new_password": "NewPassword123!",
         },
         headers={"Authorization": f"Bearer {non_fresh_access_token}"},
