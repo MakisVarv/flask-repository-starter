@@ -78,3 +78,10 @@ class ResetPasswordSchema(Schema):
 
 
 reset_password_schema = ResetPasswordSchema()
+
+
+class ReauthenticateSchema(Schema):
+    new_password = fields.String(required=True)
+
+
+reauthenticate_schema = ReauthenticateSchema()
