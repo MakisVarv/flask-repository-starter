@@ -469,7 +469,6 @@ def test_change_password(client, regular_user):
     response = client.post(
         "/api/auth/change-password",
         json={
-            "current_password": regular_user["password"],
             "new_password": "NewPassword123!",
         },
         headers={"Authorization": f"Bearer {access_token}"},
@@ -489,7 +488,7 @@ def test_change_password(client, regular_user):
         )
 
 
-def test_change_password_rejects_wrong_current_password(
+def test_reauthenticate_rejects_wrong_password(
     client,
     regular_user,
 ):
@@ -501,29 +500,22 @@ def test_change_password_rejects_wrong_current_password(
         },
     )
 
+    assert login_response.status_code == 200
+
     access_token = login_response.get_json()["access_token"]
 
     response = client.post(
-        "/api/auth/change-password",
+        "/api/auth/reauthenticate",
         json={
             "current_password": "WrongPassword123!",
-            "new_password": "NewPassword123!",
         },
-        headers={"Authorization": f"Bearer {access_token}"},
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
     )
 
     assert response.status_code == 401
     assert response.get_json()["message"] == "Invalid password."
-
-    with SessionLocal() as session:
-        user_repository = UserRepository(session)
-        user = user_repository.get_by_id(regular_user["id"])
-
-        assert user is not None
-        assert check_password_hash(
-            user.password_hash,
-            regular_user["password"],
-        )
 
 
 def test_change_password_revokes_all_refresh_sessions(
@@ -551,7 +543,6 @@ def test_change_password_revokes_all_refresh_sessions(
     response = client.post(
         "/api/auth/change-password",
         json={
-            "current_password": regular_user["password"],
             "new_password": "NewPassword123!",
         },
         headers={"Authorization": f"Bearer {access_token}"},
@@ -626,7 +617,6 @@ def test_change_password_requires_minimum_password_length(
     response = client.post(
         "/api/auth/change-password",
         json={
-            "current_password": regular_user["password"],
             "new_password": "short",
         },
         headers={"Authorization": f"Bearer {access_token}"},
@@ -657,7 +647,6 @@ def test_old_password_no_longer_works_after_change(
     change_response = client.post(
         "/api/auth/change-password",
         json={
-            "current_password": regular_user["password"],
             "new_password": "NewPassword123!",
         },
         headers={"Authorization": f"Bearer {access_token}"},
