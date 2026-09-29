@@ -347,7 +347,6 @@ def test_change_email_requires_fresh_token(client, regular_user):
     response = client.post(
         "/api/auth/change-email",
         json={
-            "current_password": regular_user["password"],
             "new_email": "newjohn@example.com",
         },
         headers={"Authorization": f"Bearer {non_fresh_token}"},
