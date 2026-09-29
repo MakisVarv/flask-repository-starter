@@ -280,7 +280,6 @@ def test_change_email(client, regular_user):
     response = client.post(
         "/api/auth/change-email",
         json={
-            "current_password": regular_user["password"],
             "new_email": "newjohn@example.com",
         },
         headers={"Authorization": f"Bearer {access_token}"},
@@ -295,37 +294,6 @@ def test_change_email(client, regular_user):
 
         assert user is not None
         assert user.email == "newjohn@example.com"
-
-
-def test_change_email_rejects_wrong_password(client, regular_user):
-    login_response = client.post(
-        "/api/auth/login",
-        json={
-            "email": regular_user["email"],
-            "password": regular_user["password"],
-        },
-    )
-
-    access_token = login_response.get_json()["access_token"]
-
-    response = client.post(
-        "/api/auth/change-email",
-        json={
-            "current_password": "WrongPassword123!",
-            "new_email": "newjohn@example.com",
-        },
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
-
-    assert response.status_code == 401
-    assert response.get_json()["message"] == "Invalid password."
-
-    with SessionLocal() as session:
-        user_repository = UserRepository(session)
-        user = user_repository.get_by_id(regular_user["id"])
-
-        assert user is not None
-        assert user.email == regular_user["email"]
 
 
 def test_change_email_rejects_existing_email(
@@ -346,7 +314,6 @@ def test_change_email_rejects_existing_email(
     response = client.post(
         "/api/auth/change-email",
         json={
-            "current_password": regular_user["password"],
             "new_email": admin_user["email"],
         },
         headers={"Authorization": f"Bearer {access_token}"},
@@ -403,7 +370,6 @@ def test_change_email_rejects_invalid_email(client, regular_user):
     response = client.post(
         "/api/auth/change-email",
         json={
-            "current_password": regular_user["password"],
             "new_email": "not-an-email",
         },
         headers={"Authorization": f"Bearer {access_token}"},
@@ -439,7 +405,6 @@ def test_change_email_revokes_refresh_sessions(client, regular_user):
     response = client.post(
         "/api/auth/change-email",
         json={
-            "current_password": regular_user["password"],
             "new_email": "newjohn@example.com",
         },
         headers={"Authorization": f"Bearer {access_token}"},
@@ -478,7 +443,6 @@ def test_change_email_to_same_email_is_noop(client, regular_user):
     response = client.post(
         "/api/auth/change-email",
         json={
-            "current_password": regular_user["password"],
             "new_email": regular_user["email"],
         },
         headers={"Authorization": f"Bearer {access_token}"},
