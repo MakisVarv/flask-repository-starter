@@ -228,15 +228,9 @@ class AuthService:
     def change_email(
         self,
         user_id: uuid.UUID,
-        current_password: str,
         new_email: str,
     ) -> None:
         user = self.get_current_user(user_id)
-
-        password_ok = check_password_hash(user.password_hash, current_password)
-
-        if not password_ok:
-            raise UnauthorizedException("Invalid password.")
 
         existing_user = self.user_repository.get_by_email(new_email)
 

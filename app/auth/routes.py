@@ -221,7 +221,6 @@ def change_email():
         service = AuthService(session)
         service.change_email(
             user_id=user_id,
-            current_password=data["current_password"],
             new_email=data["new_email"],
         )
         response = jsonify({"message": "Email changed successfully."})

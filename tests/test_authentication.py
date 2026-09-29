@@ -1,3 +1,4 @@
+from flask_jwt_extended import decode_token
 from sqlalchemy import func, select
 from werkzeug.security import check_password_hash
 
@@ -5,6 +6,45 @@ from app.auth.model import AuthSession
 from app.config.database import SessionLocal
 from app.users.model import User
 from app.users.repository import UserRepository
+
+
+def test_reauthenticate_returns_fresh_access_token(
+    client,
+    regular_user,
+):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": regular_user["email"],
+            "password": regular_user["password"],
+        },
+    )
+
+    assert login_response.status_code == 200
+
+    access_token = login_response.get_json()["access_token"]
+
+    response = client.post(
+        "/api/auth/reauthenticate",
+        json={
+            "current_password": regular_user["password"],
+        },
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
+    )
+
+    assert response.status_code == 200
+
+    fresh_access_token = response.get_json()["access_token"]
+
+    with client.application.app_context():
+        original_payload = decode_token(access_token)
+        fresh_payload = decode_token(fresh_access_token)
+
+    assert fresh_payload["sub"] == str(regular_user["id"])
+    assert fresh_payload["fresh"] is not False
+    assert fresh_payload["sid"] == original_payload["sid"]
 
 
 def test_logout_all(client, regular_user):
