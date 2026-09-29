@@ -47,7 +47,6 @@ update_me_schema = UpdateMeSchema()
 
 
 class ChangePasswordSchema(Schema):
-    current_password = fields.String(required=True)
     new_password = fields.String(required=True, validate=validate.Length(min=8))
 
 

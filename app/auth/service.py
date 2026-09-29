@@ -206,15 +206,9 @@ class AuthService:
     def change_password(
         self,
         user_id: uuid.UUID,
-        current_password: str,
         new_password: str,
     ) -> None:
         user = self.get_current_user(user_id)
-
-        password_ok = check_password_hash(user.password_hash, current_password)
-
-        if not password_ok:
-            raise UnauthorizedException("Invalid password.")
         try:
             user.password_hash = generate_password_hash(new_password)
 

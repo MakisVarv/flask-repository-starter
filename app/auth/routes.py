@@ -202,7 +202,6 @@ def change_password():
         service = AuthService(session)
         service.change_password(
             user_id=user_id,
-            current_password=data["current_password"],
             new_password=data["new_password"],
         )
         response = jsonify({"message": "Password changed successfully."})
