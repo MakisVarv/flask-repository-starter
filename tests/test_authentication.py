@@ -1,4 +1,10 @@
-from flask_jwt_extended import decode_token
+from datetime import timedelta
+
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+)
 from sqlalchemy import func, select
 from werkzeug.security import check_password_hash
 
@@ -6,6 +12,67 @@ from app.auth.model import AuthSession
 from app.config.database import SessionLocal
 from app.users.model import User
 from app.users.repository import UserRepository
+
+
+def test_expired_access_token_returns_stable_error_code(
+    client,
+    regular_user,
+):
+    with client.application.app_context():
+        expired_access_token = create_access_token(
+            identity=str(regular_user["id"]),
+            expires_delta=timedelta(seconds=-1),
+        )
+
+    response = client.get(
+        "/api/auth/me",
+        headers={
+            "Authorization": f"Bearer {expired_access_token}",
+        },
+    )
+
+    assert response.status_code == 401
+
+    data = response.get_json()
+
+    assert data["message"] == "Access token expired."
+    assert data["code"] == "access_token_expired"
+
+
+def test_expired_refresh_token_returns_stable_error_code(
+    client,
+    regular_user,
+):
+    with client.application.app_context():
+        expired_refresh_token = create_refresh_token(
+            identity=str(regular_user["id"]),
+            expires_delta=timedelta(seconds=-1),
+        )
+
+        refresh_payload = decode_token(
+            expired_refresh_token,
+            allow_expired=True,
+        )
+
+    client.set_cookie(
+        "refresh_token_cookie",
+        expired_refresh_token,
+        path="/api/auth",
+    )
+
+    response = client.post(
+        "/api/auth/refresh",
+        headers={
+            "X-CSRF-TOKEN": refresh_payload["csrf"],
+        },
+    )
+
+    assert response.status_code == 401
+
+    data = response.get_json()
+
+    assert data["message"] == "Refresh token expired."
+    assert data["code"] == "refresh_token_expired"
 
 
 def test_reauthenticate_returns_fresh_access_token(
