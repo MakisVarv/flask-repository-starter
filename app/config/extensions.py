@@ -19,6 +19,22 @@ def invalid_token_callback(reason: str):
     return {"message": "Invalid token."}, 401
 
 
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header: dict, jwt_payload: dict):
+    token_type = jwt_payload.get("type")
+
+    if token_type == "refresh":
+        return {
+            "message": "Refresh token expired.",
+            "code": "refresh_token_expired",
+        }, 401
+
+    return {
+        "message": "Access token expired.",
+        "code": "access_token_expired",
+    }, 401
+
+
 def register_extensions(app: Flask) -> None:
     init_db(app)
     jwt.init_app(app)
