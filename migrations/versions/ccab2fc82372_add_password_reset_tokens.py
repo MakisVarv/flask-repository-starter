@@ -5,11 +5,12 @@ Revises: b00b45a43d89
 Create Date: 2026-09-27 21:08:16.663068
 
 """
+
 from typing import Sequence, Union
 
 # revision identifiers, used by Alembic.
-revision: str = 'ccab2fc82372'
-down_revision: Union[str, Sequence[str], None] = 'b00b45a43d89'
+revision: str = "ccab2fc82372"
+down_revision: Union[str, Sequence[str], None] = "b00b45a43d89"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
