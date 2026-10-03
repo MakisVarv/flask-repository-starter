@@ -7,6 +7,9 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/starter_db_test
+      JWT_SECRET_KEY: ci-test-secret
     services:
       postgres:
         image: postgres:17
