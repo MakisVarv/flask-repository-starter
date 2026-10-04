@@ -13,6 +13,7 @@ marshmallow = "*"
 flask-jwt-extended = "*"
 flask-cors = "*"
 flask-limiter = {extras = ["redis"], version = "*"}
+gunicorn = "*"
 
 [dev-packages]
 black = "*"
