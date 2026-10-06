@@ -2,13 +2,11 @@ from sqlalchemy.orm import Session
 
 from app.config.permissions import PERMISSIONS
 from app.permissions.repository import PermissionRepository
-from app.roles.repository import RoleRepository
 
 
 class PermissionPruneService:
     def __init__(self, session: Session) -> None:
         self.permission_repository = PermissionRepository(session)
-        self.role_repository = RoleRepository(session)
         self.session = session
 
     def prune(self, permission_name: str) -> None:

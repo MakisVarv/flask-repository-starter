@@ -12,4 +12,5 @@ if __name__ == "__main__":
         print(f"Created: {result.created}")
         print(f"Updated: {result.updated}")
         print(f"Unchanged: {result.unchanged}")
-        print(f"Stale: {result.stale}")
+        if result.stale:
+            raise RuntimeError(f"Stale permissions detected: {', '.join(result.stale)}")
