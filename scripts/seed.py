@@ -4,8 +4,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash
 
-from app.config.permissions import PERMISSIONS
-from app.permissions.model import Permission
 from app.roles.model import Role
 from app.users.model import User
 from app.users.repository import UserRepository
@@ -14,37 +12,6 @@ ROLES: list[dict[str, str | int]] = [
     {"name": "Admin", "description": "Full system administrator", "level": 100},
     {"name": "User", "description": "Standard system user", "level": 10},
 ]
-
-ROLE_PERMISSIONS: dict[str, list[str]] = {
-    "Admin": [permission["name"] for permission in PERMISSIONS]
-}
-
-
-def seed_permissions(session: Session) -> None:
-
-    print("Starting permission seed...")
-
-    for permission in PERMISSIONS:
-
-        print(permission["name"])
-
-        existing = session.scalar(
-            select(Permission).where(Permission.name == permission["name"])
-        )
-
-        if existing:
-            print(f"{permission['name']} already exists")
-            continue
-
-        print(f"Adding {permission['name']}")
-
-        session.add(
-            Permission(name=permission["name"], description=permission["description"])
-        )
-
-    session.commit()
-
-    print("Commit completed.")
 
 
 def seed_roles(session: Session) -> None:
@@ -72,36 +39,6 @@ def seed_roles(session: Session) -> None:
     session.commit()
 
     print("Commit completed.")
-
-
-def seed_role_permissions(session: Session) -> None:
-    print("Starting role-permission seed...")
-
-    for role_name, permission_names in ROLE_PERMISSIONS.items():
-        role = session.scalar(select(Role).where(Role.name == role_name))
-
-        if role is None:
-            raise RuntimeError(f"Role '{role_name}' does not exist.")
-
-        existing_permissions = {permission.name for permission in role.permissions}
-
-        for permission_name in permission_names:
-            if permission_name in existing_permissions:
-                print(f"{role_name} already has {permission_name}")
-                continue
-
-            permission = session.scalar(
-                select(Permission).where(Permission.name == permission_name)
-            )
-
-            if permission is None:
-                raise RuntimeError(f"Permission '{permission_name}' does not exist.")
-
-            print(f"Assigning {permission_name} to {role_name}")
-            role.permissions.append(permission)
-
-    session.commit()
-    print("Role-permission commit completed.")
 
 
 def seed_admin(session: Session) -> None:
@@ -162,7 +99,5 @@ if __name__ == "__main__":
     create_app()
 
     with SessionLocal() as session:
-        seed_permissions(session)
         seed_roles(session)
-        seed_role_permissions(session)
         seed_admin(session)
