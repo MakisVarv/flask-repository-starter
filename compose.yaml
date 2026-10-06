@@ -20,7 +20,8 @@ services:
 
     command: >
       sh -c "alembic upgrade head &&
-            python -m scripts.seed"
+            python -m scripts.seed &&
+            python -m scripts.sync_permissions"
 
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/starter_db
